@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { Check } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
-import { getEntitlements } from "@/server/services/entitlements";
-import { PLANS, PLAN_ORDER } from "@/lib/plans";
+import { getEntitlements, listPlans } from "@/server/services/entitlements";
 import { CardSection } from "@/components/ui/card";
 import { Badge, PlannedBadge } from "@/components/ui/badge";
 import { cn } from "@/components/ui/cn";
+import { getBuiltInApp } from "@/lib/apps";
 
 export const metadata: Metadata = { title: "Payments" };
 
 export default async function PaymentsSettings() {
   const user = await requireUser();
-  const { plan: currentPlan, canManageBilling } = await getEntitlements(user);
+  const [{ plan: currentPlan, canManageBilling }, allPlans] = await Promise.all([getEntitlements(user), listPlans()]);
   return (
     <>
       <CardSection
@@ -21,8 +21,8 @@ export default async function PaymentsSettings() {
         actions={<PlannedBadge phase={2} />}
       >
         <ul className="grid gap-3 sm:grid-cols-2" aria-label="Plans">
-          {PLAN_ORDER.map((id) => {
-            const plan = PLANS[id];
+          {allPlans.map((plan) => {
+            const id = plan.id;
             const current = id === currentPlan.id;
             return (
               <li key={id} className={cn("rounded-xl border p-4", current ? "border-brand-600 ring-2 ring-brand-100" : "border-neutral-200")}>
@@ -33,9 +33,9 @@ export default async function PaymentsSettings() {
                 <ul className="mt-3 space-y-1.5 text-sm text-neutral-600">
                   {[
                     `${plan.storageGb} GB storage`,
-                    plan.appZoneDownloads === null ? "Unlimited eligible AppZone downloads" : `${plan.appZoneDownloads} free AppZone downloads`,
-                    plan.teamMembers === 0 ? "No team members" : `Up to ${plan.teamMembers} team member${plan.teamMembers > 1 ? "s" : ""}`,
-                    plan.includedApps.join(", "),
+                    plan.freeAppzoneDownloadLimit === null ? "Unlimited free AppZone items" : `${plan.freeAppzoneDownloadLimit} free AppZone downloads (lifetime)`,
+                    plan.teamMemberLimit === 0 ? "No team members" : `Up to ${plan.teamMemberLimit} team member${plan.teamMemberLimit > 1 ? "s" : ""}`,
+                    plan.includedApps.map((slug) => getBuiltInApp(slug)?.name ?? slug).join(", "),
                   ].map((line) => (
                     <li key={line} className="flex gap-2">
                       <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent-500" aria-hidden="true" />
@@ -47,7 +47,7 @@ export default async function PaymentsSettings() {
             );
           })}
         </ul>
-        <p className="mt-4 text-sm text-neutral-500">Changing plans opens with Stripe checkout in Phase 2.</p>
+        <p className="mt-4 text-sm text-neutral-500">Paid plans bill monthly or yearly. Paid AppZone items are bought separately on any plan. Changing plans opens with Stripe checkout in Phase 2.</p>
       </CardSection>
       <CardSection id="billing-history" title="Billing history">
         <p className="text-sm text-neutral-500">Invoices will appear here once billing is live.</p>

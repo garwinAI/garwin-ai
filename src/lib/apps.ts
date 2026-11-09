@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { PLANS, type PlanId } from "./plans";
 
 /** A setting an app exposes in Settings → Apps → [app] → Settings. */
 export type AppSettingField = {
@@ -100,8 +99,9 @@ export const BUILT_IN_APPS: BuiltInApp[] = [
   { slug: "spreadsheets", name: "Spreadsheets", tagline: "Numbers, made easy.", description: "Build spreadsheets with formulas and let the Assistant analyze them.", href: null, canDeactivate: true, color: "from-orange-300 to-amber-600" },
 ];
 
-export function appIncludedInPlan(app: BuiltInApp, plan: PlanId) {
-  return PLANS[plan].includedApps.includes(app.name);
+/** `includedApps` comes from the server entitlement service (plan.includedApps). */
+export function appIncludedInPlan(app: BuiltInApp, includedApps: readonly string[]) {
+  return includedApps.includes(app.slug);
 }
 
 export function getBuiltInApp(slug: string) {

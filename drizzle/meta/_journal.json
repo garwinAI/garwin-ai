@@ -29,6 +29,20 @@
       "when": 1794259510793,
       "tag": "0003_drop_session_version",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794262022892,
+      "tag": "0004_data_model",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794262072805,
+      "tag": "0005_drop_legacy_user_columns",
+      "breakpoints": true
     }
   ]
 }
