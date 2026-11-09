@@ -8,7 +8,7 @@ import { sessionCookieName } from "@/lib/auth/cookie";
 const AUTH_PAGES = ["/login", "/signup"];
 
 /** Reachable with or without a session. Add webhook endpoints here (they authenticate by signature). */
-const PUBLIC_PREFIXES = ["/api/health", "/api/auth/session-expired", "/forgot-password", "/reset-password", "/verify-email"];
+const PUBLIC_PREFIXES = ["/api/health", "/api/auth/session-expired", "/forgot-password", "/reset-password", "/verify-email", "/invite"];
 
 const matches = (pathname: string, prefixes: string[]) =>
   prefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));

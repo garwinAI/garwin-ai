@@ -169,10 +169,14 @@ describe("team members", () => {
     await expectAppError(reserveStorage(member, 10), "FORBIDDEN");
   });
 
-  it("a person can belong to only one account, and an account has one owner", async () => {
+  it("a person owns one workspace, can't join the same one twice, and each account has one owner", async () => {
     const a = await host();
     const b = await host();
-    await expectDbError(db.insert(accountMembers).values({ accountId: b.accountId, userId: a.user.id, role: "member" }), "account_members_user_id_unique");
+    // joining another host's team is allowed (multi-workspace), but only once...
+    await db.insert(accountMembers).values({ accountId: b.accountId, userId: a.user.id, role: "member" });
+    await expectDbError(db.insert(accountMembers).values({ accountId: b.accountId, userId: a.user.id, role: "member" }), "account_members_account_user_idx");
+    // ...and nobody can own two workspaces or make a second owner.
+    await expectDbError(db.update(accountMembers).set({ role: "owner" }).where(and(eq(accountMembers.accountId, b.accountId), eq(accountMembers.userId, a.user.id))));
     const other = await teamMember(a.accountId, []);
     await expectDbError(db.update(accountMembers).set({ role: "owner" }).where(eq(accountMembers.userId, other.id)), "account_members_one_owner_idx");
   });
@@ -415,7 +419,9 @@ describe("support access and audit log", () => {
 
   it("messages belong to conversations that belong to accounts", async () => {
     const { accountId } = await host();
-    await expectDbError(db.insert(conversations).values({ accountId: "00000000-0000-0000-0000-000000000000", kind: "team" }));
-    await db.insert(conversations).values({ accountId, kind: "team" });
+    await expectDbError(db.insert(conversations).values({ accountId: "00000000-0000-0000-0000-000000000000", kind: "team", channelKey: "all" }));
+    await expectDbError(db.insert(conversations).values({ accountId, kind: "team" }), "conversations_team_has_channel");
+    await db.insert(conversations).values({ accountId, kind: "team", channelKey: "all" });
+    await expectDbError(db.insert(conversations).values({ accountId, kind: "team", channelKey: "all" }), "conversations_channel_idx");
   });
 });

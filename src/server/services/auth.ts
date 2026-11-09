@@ -44,7 +44,7 @@ export async function registerUser(input: { name: string; email: string; passwor
   await enforce(`signup:ip:${ipKey(meta)}`, LIMITS.signupPerIp, "Too many sign-ups from this network. Try again later.");
   checkPassword(input.password, input.email);
   if (await findUserByEmail(input.email)) {
-    throw new AppError("CONFLICT", "An account with that email already exists.");
+    throw new AppError("CONFLICT", "You already have an account with that email. Log in instead.");
   }
   const user = await createUser({ name: input.name, email: input.email, passwordHash: await hashPassword(input.password) });
   await recordSecurityEvent({ userId: user.id, email: user.email, event: "signup", ...meta });

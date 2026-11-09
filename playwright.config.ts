@@ -34,7 +34,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "node tests/support/mock-resend.mjs",
+      command: "node tests/support/mock-providers.mjs",
       url: `http://localhost:${MOCK_RESEND_PORT}/health`,
       env: { MOCK_MAIL_FILE: MAIL_FILE, MOCK_RESEND_PORT: String(MOCK_RESEND_PORT) },
       reuseExistingServer: false,
@@ -50,6 +50,10 @@ export default defineConfig({
         RESEND_API_KEY: "re_test_e2e_not_a_real_key",
         RESEND_API_URL: `http://localhost:${MOCK_RESEND_PORT}/emails`,
         EMAIL_TRANSPORT: "resend",
+        TWILIO_ACCOUNT_SID: "ACtest00000000000000000000000000",
+        TWILIO_AUTH_TOKEN: "test_token_not_real",
+        TWILIO_FROM: "+15005550006",
+        TWILIO_API_BASE: `http://localhost:${MOCK_RESEND_PORT}`,
         MAIL_LOG_FILE: "",
       },
     },

@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth/session";
-import { getEntitlements } from "@/server/services/entitlements";
+import { getEntitlements, listMemberships } from "@/server/services/entitlements";
 import { listInstalledApps } from "@/server/services/apps";
 import { AppShell } from "@/components/shell/app-shell";
 import { SIDEBAR_COOKIE } from "@/components/shell/nav";
@@ -10,11 +10,12 @@ import { getAssistantStatus } from "@/server/services/assistant";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
-  const [{ plan }, apps, jar, assistant] = await Promise.all([
+  const [ent, apps, jar, assistant, workspaces] = await Promise.all([
     getEntitlements(user),
     listInstalledApps(user),
     cookies(),
     getAssistantStatus(),
+    listMemberships(user.id),
   ]);
   const activeApps = apps.filter((a) => a.active).map((a) => a.app.slug);
 
@@ -23,7 +24,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <AppShell
         activeApps={activeApps}
         isAdmin={user.role === "admin"}
-        user={{ name: user.name, email: user.email, planName: plan.name }}
+        permissions={[...ent.permissions]}
+        workspaces={workspaces}
+        currentAccountId={ent.accountId}
+        user={{ name: user.name, email: user.email, planName: ent.isTeamMember ? `${ent.plan.name} (team)` : ent.plan.name }}
         initialCollapsed={jar.get(SIDEBAR_COOKIE)?.value === "1"}
       >
         {!user.emailVerifiedAt && <VerifyBanner email={user.email} />}

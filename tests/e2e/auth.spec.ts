@@ -47,12 +47,13 @@ test.describe("registration", () => {
     const other = await newDevice(browser);
     await other.goto("/signup");
     await other.getByLabel("Name").fill("Someone");
-    await other.getByLabel("Email").fill(email);
+    await other.getByLabel("Email", { exact: true }).fill(email);
     await other.getByLabel("Password").fill("another-password-1");
     await other.getByRole("button", { name: "Create free account" }).click();
-    await expect(formError(other)).toHaveText("An account with that email already exists.");
+    await expect(formError(other)).toHaveText("You already have an account with that email. Log in instead.");
+    await expect(other.getByRole("link", { name: "Log in instead" })).toBeVisible();
 
-    await other.getByLabel("Email").fill(uniqueEmail("weak"));
+    await other.getByLabel("Email", { exact: true }).fill(uniqueEmail("weak"));
     await other.getByLabel("Password").fill("password123");
     await other.getByRole("button", { name: "Create free account" }).click();
     await expect(formError(other)).toContainText("too common");
@@ -67,7 +68,7 @@ test.describe("login and logout", () => {
 
     await logIn(page, email, "wrong-password-123");
     await expect(formError(page)).toHaveText("Incorrect email or password.");
-    await expect(page.getByLabel("Email")).toHaveValue(email);
+    await expect(page.getByLabel("Email", { exact: true })).toHaveValue(email);
 
     await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
     await page.getByRole("button", { name: "Log in" }).click();
@@ -141,7 +142,7 @@ test.describe("password reset", () => {
     const visitor = await newDevice(browser);
     await visitor.goto("/login");
     await visitor.getByRole("link", { name: "Forgot password?" }).click();
-    await visitor.getByLabel("Email").fill(email);
+    await visitor.getByLabel("Email", { exact: true }).fill(email);
     await visitor.getByRole("button", { name: "Send reset link" }).click();
     await expect(visitor.getByRole("status")).toContainText("If an account exists");
 
@@ -168,7 +169,7 @@ test.describe("password reset", () => {
   test("unknown email shows the same confirmation and sends nothing", async ({ page }) => {
     const email = uniqueEmail("ghost");
     await page.goto("/forgot-password");
-    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByRole("button", { name: "Send reset link" }).click();
     await expect(page.getByRole("status")).toContainText("If an account exists");
     await page.waitForTimeout(500);
@@ -179,7 +180,7 @@ test.describe("password reset", () => {
     const { email } = await signUp(page);
     const v = await newDevice(browser);
     await v.goto("/forgot-password");
-    await v.getByLabel("Email").fill(email);
+    await v.getByLabel("Email", { exact: true }).fill(email);
     await v.getByRole("button", { name: "Send reset link" }).click();
     const link = await waitForLink(email, "password_reset");
 
@@ -269,6 +270,7 @@ test.describe("account security settings", () => {
   test("activity history shows sign-ins and security changes with IPs", async ({ page, clientIp }) => {
     const { email } = await signUp(page);
     await page.getByRole("button", { name: "Log Out" }).click();
+    await expect(page).toHaveURL(/\/login$/);
     await logIn(page, email, "wrong-password-1");
     await logIn(page, email, PASSWORD);
     await expect(page).toHaveURL(/\/assistant$/);

@@ -30,7 +30,7 @@ export async function signUp(page: Page, opts: { name?: string; email?: string; 
   };
   await page.goto("/signup");
   await page.getByLabel("Name").fill(creds.name);
-  await page.getByLabel("Email").fill(creds.email);
+  await page.getByLabel("Email", { exact: true }).fill(creds.email);
   await page.getByLabel("Password").fill(creds.password);
   await page.getByRole("button", { name: "Create free account" }).click();
   await expect(page).toHaveURL(/\/assistant$/);
@@ -39,7 +39,7 @@ export async function signUp(page: Page, opts: { name?: string; email?: string; 
 
 export async function logIn(page: Page, email: string, password: string) {
   await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Log in" }).click();
 }
@@ -55,7 +55,7 @@ function readMail(): Mail[] {
 export const mailsTo = (email: string) => readMail().filter((m) => m.to === email);
 
 /** Waits for an email of the given type and returns the link inside it. */
-export async function waitForLink(email: string, tag: "verify_email" | "password_reset"): Promise<string> {
+export async function waitForLink(email: string, tag: "verify_email" | "password_reset" | "team_invite"): Promise<string> {
   let link: string | undefined;
   await expect
     .poll(() => {
@@ -66,3 +66,20 @@ export async function waitForLink(email: string, tag: "verify_email" | "password
     .toBeTruthy();
   return link!;
 }
+
+// ---------------------------------------------------------------- direct DB helpers (test setup only)
+
+import pg from "pg";
+let pool: pg.Pool | undefined;
+const sql = () => (pool ??= new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 }));
+
+/** Gives the user's own workspace a paid plan (Admin grant), standing in for checkout in tests. */
+export async function grantPlan(email: string, plan: "starter" | "plus" | "pro") {
+  await sql().query(
+    `insert into subscriptions (account_id, plan_id, source, status)
+     select a.id, $2, 'admin', 'active' from accounts a join users u on u.id = a.owner_user_id where u.email = $1`,
+    [email, plan],
+  );
+}
+
+export const uniquePhone = () => `+1555${Math.floor(1_000_000 + Math.random() * 8_999_999)}`;

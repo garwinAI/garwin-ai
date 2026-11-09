@@ -10,6 +10,7 @@ import { z } from "zod";
 import { runAction, type FormState } from "@/lib/actions";
 import { logger } from "@/lib/logger";
 import { emailSchema, nameSchema, parseInput, uuidSchema } from "@/lib/validation";
+import { safeNextPath } from "@/lib/security/redirect";
 import {
   authenticate,
   changePassword as changePasswordFlow,
@@ -34,7 +35,7 @@ const log = logger.child({ module: "auth-actions" });
 
 // ---------------------------------------------------------------- sign up / in / out
 
-const signUpSchema = z.object({ name: nameSchema, email: emailSchema, password: z.string() });
+const signUpSchema = z.object({ name: nameSchema, email: emailSchema, password: z.string(), next: z.string().optional() });
 
 export async function signUp(_: FormState, form: FormData): Promise<FormState> {
   const values = { name: String(form.get("name") ?? ""), email: String(form.get("email") ?? "") };
@@ -43,7 +44,7 @@ export async function signUp(_: FormState, form: FormData): Promise<FormState> {
     async () => {
       const input = parseInput(signUpSchema, form);
       const meta = await requestMeta();
-      const user = await registerUser(input, meta);
+      const user = await registerUser({ name: input.name, email: input.email, password: input.password }, meta);
       await startSession(user.id, meta);
       // Send after the response so a slow or failing email provider doesn't block sign-up.
       after(() => sendVerificationEmail(user, meta).catch((err) => log.error("verification_email.failed", { err })));
@@ -51,10 +52,10 @@ export async function signUp(_: FormState, form: FormData): Promise<FormState> {
     values,
   );
   if (result) return result;
-  redirect("/assistant");
+  redirect(safeNextPath(form.get("next")));
 }
 
-const logInSchema = z.object({ email: emailSchema, password: z.string().min(1, "Enter your password.").max(1000) });
+const logInSchema = z.object({ email: emailSchema, password: z.string().min(1, "Enter your password.").max(1000), next: z.string().optional() });
 
 export async function logIn(_: FormState, form: FormData): Promise<FormState> {
   const values = { email: String(form.get("email") ?? "") };
@@ -63,20 +64,21 @@ export async function logIn(_: FormState, form: FormData): Promise<FormState> {
     async () => {
       const input = parseInput(logInSchema, form);
       const meta = await requestMeta();
-      const user = await authenticate(input, meta);
+      const user = await authenticate({ email: input.email, password: input.password }, meta);
       await startSession(user.id, meta);
     },
     values,
   );
   if (result) return result;
-  redirect("/assistant");
+  redirect(safeNextPath(form.get("next")));
 }
 
-export async function logOut() {
+export async function logOut(form?: FormData) {
   const current = await getCurrentSession();
   if (current) await logout(current.user, current.session.id, await requestMeta());
   await clearSessionCookie();
-  redirect("/login");
+  const next = safeNextPath(form?.get("next"), "");
+  redirect(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
 }
 
 // ---------------------------------------------------------------- password reset (signed out)

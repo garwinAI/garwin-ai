@@ -4,6 +4,7 @@ import { NavTabs } from "@/components/ui/nav-tabs";
 // Order follows the product spec.
 const SETTINGS_TABS = [
   { href: "/settings/general", label: "General" },
+  { href: "/settings/team", label: "Team" },
   { href: "/settings/payments", label: "Payments" },
   { href: "/settings/cards", label: "Cards" },
   { href: "/settings/apps", label: "Apps" },

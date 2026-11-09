@@ -1,6 +1,6 @@
 // Conversations (host/team chats and support threads), messages and in-app notifications.
 import { sql } from "drizzle-orm";
-import { check, index, jsonb, pgEnum, pgTable, primaryKey, text, uuid } from "drizzle-orm/pg-core";
+import { check, index, jsonb, pgEnum, pgTable, primaryKey, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAt, ts } from "./_shared";
 import { users } from "./auth";
 import { accounts } from "./accounts";
@@ -17,11 +17,18 @@ export const conversations = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     kind: conversationKind("kind").notNull(),
     subject: text("subject"),
+    // Kind "team": "all" = the account-wide team chat; "direct:<userA>:<userB>" (sorted ids) = a
+    // one-to-one thread. Unique per account, so there's exactly one of each. Null for support.
+    channelKey: text("channel_key"),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     lastMessageAt: ts("last_message_at"),
     createdAt: createdAt(),
   },
-  (t) => [index("conversations_account_idx").on(t.accountId, t.lastMessageAt)],
+  (t) => [
+    index("conversations_account_idx").on(t.accountId, t.lastMessageAt),
+    uniqueIndex("conversations_channel_idx").on(t.accountId, t.channelKey),
+    check("conversations_team_has_channel", sql`${t.kind} <> 'team' or ${t.channelKey} is not null`),
+  ],
 );
 
 export const conversationParticipants = pgTable(

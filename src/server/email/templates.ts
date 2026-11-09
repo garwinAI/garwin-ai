@@ -2,7 +2,7 @@
 // All user-supplied values are HTML-escaped.
 
 export type EmailMessage = { to: string; subject: string; text: string; html: string; tag: EmailTag };
-export type EmailTag = "verify_email" | "password_reset" | "password_changed";
+export type EmailTag = "verify_email" | "password_reset" | "password_changed" | "team_invite";
 
 export function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -63,6 +63,19 @@ export function passwordChangedMessage(to: string, name: string, when: Date, ip:
     html: layout(
       "Your password was changed",
       `<p>Hi ${escapeHtml(name)},</p><p>Your Garwin AI password was changed on ${escapeHtml(whenText)}${escapeHtml(from)}. All other devices were signed out.</p><p>If this wasn't you, reset your password right away and review your account security.</p>${button(settingsUrl, "Review security")}`,
+    ),
+  };
+}
+
+export function teamInviteMessage(to: string, hostName: string, workspaceName: string, url: string): EmailMessage {
+  return {
+    to,
+    tag: "team_invite",
+    subject: `${hostName} invited you to their Garwin AI team`,
+    text: `${hostName} invited you to join "${workspaceName}" on Garwin AI.\n\nAccept the invitation:\n${url}\n\nThis link expires in 7 days and works once. If you weren't expecting this, you can ignore it.`,
+    html: layout(
+      "You're invited to a team",
+      `<p><strong>${escapeHtml(hostName)}</strong> invited you to join <strong>${escapeHtml(workspaceName)}</strong> on Garwin AI.</p>${button(url, "Accept invitation")}<p style="font-size:13px;color:#6b6b6b">This link expires in 7 days and works once. If you weren't expecting this, you can ignore it.</p>`,
     ),
   };
 }

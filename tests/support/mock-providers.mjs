@@ -1,6 +1,6 @@
-// Minimal stand-in for the Resend API, used only by e2e tests.
-// The app sends real HTTP requests to it (same code path as production); each email is
-// appended as a JSON line to MOCK_MAIL_FILE so tests can read verification/reset links.
+// Minimal stand-ins for the Resend (email) and Twilio (SMS) APIs, used only by e2e tests.
+// The app sends real HTTP requests to them (same code path as production); each email or SMS is
+// appended as a JSON line to MOCK_MAIL_FILE so tests can read verification/reset/invite links.
 import { appendFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 
@@ -29,5 +29,20 @@ createServer((req, res) => {
     });
     return;
   }
+  const twilio = req.url?.match(/^\/2010-04-01\/Accounts\/([^/]+)\/Messages\.json$/);
+  if (req.method === "POST" && twilio) {
+    if (!String(req.headers.authorization ?? "").startsWith("Basic ")) {
+      res.writeHead(401).end();
+      return;
+    }
+    let body = "";
+    req.on("data", (c) => (body += c));
+    req.on("end", () => {
+      const p = new URLSearchParams(body);
+      appendFileSync(file, JSON.stringify({ to: p.get("To"), subject: "sms", text: p.get("Body"), tag: "team_invite", from: p.get("From") ?? p.get("MessagingServiceSid"), at: new Date().toISOString() }) + "\n");
+      res.writeHead(201, { "content-type": "application/json" }).end(JSON.stringify({ sid: "SM" + crypto.randomUUID().replace(/-/g, "") }));
+    });
+    return;
+  }
   res.writeHead(404).end();
-}).listen(port, () => console.log(`mock resend on :${port}`));
+}).listen(port, () => console.log(`mock providers on :${port}`));

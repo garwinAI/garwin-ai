@@ -9,6 +9,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/components/ui/cn";
 import { SIDEBAR_COOKIE, visibleNav } from "./nav";
 import { SidebarNav, type ShellUser } from "./sidebar";
+import { WorkspaceSwitcher, type Workspace } from "./workspace-switcher";
 
 /**
  * Responsive workspace frame.
@@ -18,6 +19,9 @@ import { SidebarNav, type ShellUser } from "./sidebar";
 export function AppShell({
   activeApps,
   isAdmin,
+  permissions,
+  workspaces,
+  currentAccountId,
   user,
   initialCollapsed,
   children,
@@ -25,13 +29,17 @@ export function AppShell({
   /** Slugs of active apps; their nav items are shown */
   activeApps: string[];
   isAdmin: boolean;
+  permissions: string[];
+  workspaces: Workspace[];
+  currentAccountId: string;
   user: ShellUser;
   initialCollapsed: boolean;
   children: ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const items = visibleNav(activeApps, isAdmin);
+  const items = visibleNav(activeApps, isAdmin, permissions);
+  const switcher = workspaces.length > 1 ? <WorkspaceSwitcher workspaces={workspaces} currentAccountId={currentAccountId} /> : null;
 
   function toggleCollapsed() {
     const next = !collapsed;
@@ -59,6 +67,7 @@ export function AppShell({
         <div className="flex h-14 items-center px-4">
           <Logo />
         </div>
+        {switcher}
         <SidebarNav items={items} user={user} onNavigate={() => setDrawerOpen(false)} />
       </Drawer>
 
@@ -81,6 +90,7 @@ export function AppShell({
             <IconButton icon={PanelLeftOpen} label="Expand sidebar" onClick={toggleCollapsed} />
           </div>
         )}
+        {!collapsed && switcher}
         <SidebarNav items={items} user={user} collapsed={collapsed} />
       </aside>
 

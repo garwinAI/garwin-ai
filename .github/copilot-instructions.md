@@ -118,6 +118,13 @@ an `appSlug` disappear when that app is deactivated.
 - New endpoints that can be abused (sending email, guessing secrets) need a limit from
   `LIMITS` via `enforce()` in `src/server/services/rate-limit.ts`.
 - Email links carry tokens in the URL fragment (`#token=`), read with `useFragmentToken()`.
+- **Multi-account access:** `requireUser()` returns the user with the `accountId` of the workspace
+  the session is viewing (membership already verified). Pass that user to services; every query
+  must filter by `ent.accountId`. A record from another account must produce NOT_FOUND, never
+  FORBIDDEN (don't confirm it exists). Write an integration test for cross-account access on every
+  new feature.
+- Redirect targets from the client (e.g. `?next=`) must go through `safeNextPath()`.
+- Log sensitive team, storage and billing actions with `recordAudit()`.
 
 ## How to work
 

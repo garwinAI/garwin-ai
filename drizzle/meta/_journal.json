@@ -43,6 +43,27 @@
       "when": 1794262072805,
       "tag": "0005_drop_legacy_user_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794263010562,
+      "tag": "0006_teams",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794263044014,
+      "tag": "0007_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794263236250,
+      "tag": "0008_conversation_channels",
+      "breakpoints": true
     }
   ]
 }

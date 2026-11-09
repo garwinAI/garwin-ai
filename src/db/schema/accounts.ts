@@ -1,7 +1,8 @@
 // Accounts (workspaces), team membership, per-member permissions and invitations.
 //
-// Every user belongs to exactly one account. The account owner is the "host"; team members
-// share the host's plan, storage and apps. The plan is NOT stored here: it comes from the
+// Every user OWNS exactly one account (their own workspace) and may also be a team member of
+// other hosts' accounts; the session remembers which workspace they're viewing. The account owner
+// is the "host"; team members share the host's plan, storage and apps. The plan is NOT stored here: it comes from the
 // account's current subscription (billing.ts), and Free when there is none.
 import { sql } from "drizzle-orm";
 import { bigint, check, index, pgEnum, pgTable, primaryKey, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
@@ -36,10 +37,8 @@ export const accountMembers = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    // unique: a person is in exactly one account
     userId: uuid("user_id")
       .notNull()
-      .unique()
       .references(() => users.id, { onDelete: "cascade" }),
     role: memberRole("role").notNull().default("member"),
     invitedBy: uuid("invited_by").references(() => users.id, { onDelete: "set null" }),
@@ -47,6 +46,9 @@ export const accountMembers = pgTable(
   },
   (t) => [
     uniqueIndex("account_members_account_user_idx").on(t.accountId, t.userId),
+    // a person owns at most one account (their own workspace)
+    uniqueIndex("account_members_one_owned_idx").on(t.userId).where(sql`${t.role} = 'owner'`),
+    index("account_members_user_idx").on(t.userId),
     // exactly one owner per account
     uniqueIndex("account_members_one_owner_idx").on(t.accountId).where(sql`${t.role} = 'owner'`),
   ],
@@ -85,6 +87,8 @@ export const memberPermissions = pgTable(
   (t) => [primaryKey({ columns: [t.memberId, t.permission] })],
 );
 
+export const invitationChannel = pgEnum("invitation_channel", ["email", "sms"]);
+
 export const invitations = pgTable(
   "invitations",
   {
@@ -92,7 +96,10 @@ export const invitations = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    email: text("email").notNull(),
+    channel: invitationChannel("channel").notNull().default("email"),
+    // Exactly one of email / phone, matching the channel. Phone is E.164 (+15551234567).
+    email: text("email"),
+    phone: text("phone"),
     tokenHash: text("token_hash").notNull().unique(),
     invitedBy: uuid("invited_by").references(() => users.id, { onDelete: "set null" }),
     expiresAt: ts("expires_at").notNull(),
@@ -102,12 +109,20 @@ export const invitations = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    check("invitations_email_lowercase", sql`${t.email} = lower(${t.email})`),
+    check("invitations_email_lowercase", sql`${t.email} is null or ${t.email} = lower(${t.email})`),
+    check(
+      "invitations_channel_target",
+      sql`(${t.channel} = 'email' and ${t.email} is not null and ${t.phone} is null) or (${t.channel} = 'sms' and ${t.phone} is not null and ${t.email} is null)`,
+    ),
+    check("invitations_phone_e164", sql`${t.phone} is null or ${t.phone} ~ '^[+][1-9][0-9]{7,14}$'`),
     check("invitations_not_both_accepted_and_revoked", sql`${t.acceptedAt} is null or ${t.revokedAt} is null`),
-    // one open invitation per email per account
+    // one open invitation per email / phone per account
     uniqueIndex("invitations_open_email_idx")
       .on(t.accountId, t.email)
-      .where(sql`${t.acceptedAt} is null and ${t.revokedAt} is null`),
+      .where(sql`${t.acceptedAt} is null and ${t.revokedAt} is null and ${t.email} is not null`),
+    uniqueIndex("invitations_open_phone_idx")
+      .on(t.accountId, t.phone)
+      .where(sql`${t.acceptedAt} is null and ${t.revokedAt} is null and ${t.phone} is not null`),
     index("invitations_account_idx").on(t.accountId),
   ],
 );
