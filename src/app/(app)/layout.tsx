@@ -5,6 +5,7 @@ import { listInstalledApps } from "@/server/services/apps";
 import { AppShell } from "@/components/shell/app-shell";
 import { SIDEBAR_COOKIE } from "@/components/shell/nav";
 import { AssistantFab } from "@/components/assistant/assistant-fab";
+import { VerifyBanner } from "@/components/auth/verify-banner";
 import { getAssistantStatus } from "@/server/services/assistant";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -25,6 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         user={{ name: user.name, email: user.email, planName: plan.name }}
         initialCollapsed={jar.get(SIDEBAR_COOKIE)?.value === "1"}
       >
+        {!user.emailVerifiedAt && <VerifyBanner email={user.email} />}
         {children}
       </AppShell>
       {/* Assistant can't be deactivated, so the floating button is always available. */}

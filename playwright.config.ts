@@ -1,8 +1,15 @@
 import "dotenv/config";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = Number(process.env.E2E_PORT ?? 3100);
+const MOCK_RESEND_PORT = 3199;
 const isCI = Boolean(process.env.CI);
+
+// Emails go to a local fake Resend server; tests read links from this file.
+export const MAIL_FILE = process.env.MOCK_MAIL_FILE ?? join(tmpdir(), "garwin-e2e-mail.jsonl");
+process.env.MOCK_MAIL_FILE = MAIL_FILE;
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -25,11 +32,26 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    // CI tests the production build; locally the dev server is fine.
-    command: isCI ? `npm run start -- --port ${PORT}` : `npm run dev -- --port ${PORT}`,
-    url: `http://localhost:${PORT}/api/health`,
-    reuseExistingServer: !isCI,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: "node tests/support/mock-resend.mjs",
+      url: `http://localhost:${MOCK_RESEND_PORT}/health`,
+      env: { MOCK_MAIL_FILE: MAIL_FILE, MOCK_RESEND_PORT: String(MOCK_RESEND_PORT) },
+      reuseExistingServer: false,
+    },
+    {
+      // CI tests the production build; locally the dev server is fine.
+      command: isCI ? `npm run start -- --port ${PORT}` : `npm run dev -- --port ${PORT}`,
+      url: `http://localhost:${PORT}/api/health`,
+      reuseExistingServer: !isCI,
+      timeout: 120_000,
+      env: {
+        APP_URL: `http://localhost:${PORT}`,
+        RESEND_API_KEY: "re_test_e2e_not_a_real_key",
+        RESEND_API_URL: `http://localhost:${MOCK_RESEND_PORT}/emails`,
+        EMAIL_TRANSPORT: "resend",
+        MAIL_LOG_FILE: "",
+      },
+    },
+  ],
 });

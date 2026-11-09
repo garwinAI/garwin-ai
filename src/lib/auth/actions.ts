@@ -1,37 +1,40 @@
 "use server";
 
-import bcrypt from "bcryptjs";
+// Thin wrappers: parse input, call the auth service, manage the cookie, redirect.
+// CSRF: Server Actions only accept POSTs whose Origin matches the Host (built into Next.js),
+// and the session cookie is SameSite=Lax.
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { runAction, type FormState } from "@/lib/actions";
-import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { emailSchema, nameSchema, parseInput, passwordSchema } from "@/lib/validation";
-import { countRecentFailures, recordLoginEvent } from "@/server/services/login-events";
+import { emailSchema, nameSchema, parseInput, uuidSchema } from "@/lib/validation";
 import {
-  createUser,
-  findUserByEmail,
-  findUserById,
-  revokeAllSessions,
-  setPasswordAndRevokeSessions,
-  updateUserName,
-} from "@/server/services/users";
-import { endSession, requestMeta, requireUser, startSession } from "./session";
+  authenticate,
+  changePassword as changePasswordFlow,
+  logout,
+  registerUser,
+  requestPasswordReset,
+  resendVerification,
+  resetPassword,
+  sendVerificationEmail,
+  signOutEverywhere,
+  signOutOtherSessions,
+  signOutSession,
+  verifyEmail,
+} from "@/server/services/auth";
+import { enforce, LIMITS } from "@/server/services/rate-limit";
+import { updateUserName } from "@/server/services/users";
+import { clearSessionCookie, getCurrentSession, requestMeta, requireSession, startSession } from "./session";
 
 export type { FormState };
 
-const log = logger.child({ module: "auth" });
+const log = logger.child({ module: "auth-actions" });
 
-const BCRYPT_ROUNDS = 12;
-const LOCKOUT_WINDOW_MIN = 15;
-const LOCKOUT_MAX_FAILS = 8;
+// ---------------------------------------------------------------- sign up / in / out
 
-// Compared against when the email doesn't exist, so response time doesn't reveal which emails are registered.
-let dummyHash: Promise<string> | undefined;
-const getDummyHash = () => (dummyHash ??= bcrypt.hash("garwin-timing-guard", BCRYPT_ROUNDS));
-
-const signUpSchema = z.object({ name: nameSchema, email: emailSchema, password: passwordSchema });
+const signUpSchema = z.object({ name: nameSchema, email: emailSchema, password: z.string() });
 
 export async function signUp(_: FormState, form: FormData): Promise<FormState> {
   const values = { name: String(form.get("name") ?? ""), email: String(form.get("email") ?? "") };
@@ -39,17 +42,11 @@ export async function signUp(_: FormState, form: FormData): Promise<FormState> {
     "signUp",
     async () => {
       const input = parseInput(signUpSchema, form);
-      if (await findUserByEmail(input.email)) {
-        throw new AppError("CONFLICT", "An account with that email already exists.");
-      }
-      const user = await createUser({
-        name: input.name,
-        email: input.email,
-        passwordHash: await bcrypt.hash(input.password, BCRYPT_ROUNDS),
-      });
-      await recordLoginEvent({ userId: user.id, email: user.email, success: true, ...(await requestMeta()) });
-      await startSession(user);
-      log.info("user.signed_up", { userId: user.id });
+      const meta = await requestMeta();
+      const user = await registerUser(input, meta);
+      await startSession(user.id, meta);
+      // Send after the response so a slow or failing email provider doesn't block sign-up.
+      after(() => sendVerificationEmail(user, meta).catch((err) => log.error("verification_email.failed", { err })));
     },
     values,
   );
@@ -57,7 +54,7 @@ export async function signUp(_: FormState, form: FormData): Promise<FormState> {
   redirect("/assistant");
 }
 
-const logInSchema = z.object({ email: emailSchema, password: z.string().min(1, "Enter your password.") });
+const logInSchema = z.object({ email: emailSchema, password: z.string().min(1, "Enter your password.").max(1000) });
 
 export async function logIn(_: FormState, form: FormData): Promise<FormState> {
   const values = { email: String(form.get("email") ?? "") };
@@ -66,18 +63,8 @@ export async function logIn(_: FormState, form: FormData): Promise<FormState> {
     async () => {
       const input = parseInput(logInSchema, form);
       const meta = await requestMeta();
-
-      if ((await countRecentFailures(input.email, meta.ip, LOCKOUT_WINDOW_MIN)) >= LOCKOUT_MAX_FAILS) {
-        log.warn("auth.throttled", { ip: meta.ip });
-        throw new AppError("RATE_LIMITED", `Too many failed attempts. Try again in ${LOCKOUT_WINDOW_MIN} minutes.`);
-      }
-
-      const user = await findUserByEmail(input.email);
-      const valid = await bcrypt.compare(input.password, user?.passwordHash ?? (await getDummyHash()));
-      await recordLoginEvent({ userId: user?.id ?? null, email: input.email, success: Boolean(user && valid), ...meta });
-      if (!user || !valid) throw new AppError("UNAUTHENTICATED", "Incorrect email or password.");
-
-      await startSession(user);
+      const user = await authenticate(input, meta);
+      await startSession(user.id, meta);
     },
     values,
   );
@@ -86,23 +73,76 @@ export async function logIn(_: FormState, form: FormData): Promise<FormState> {
 }
 
 export async function logOut() {
-  await endSession();
+  const current = await getCurrentSession();
+  if (current) await logout(current.user, current.session.id, await requestMeta());
+  await clearSessionCookie();
   redirect("/login");
 }
 
-export async function logOutEverywhere() {
-  const user = await requireUser();
-  await revokeAllSessions(user.id);
-  await endSession();
-  log.info("auth.logged_out_everywhere", { userId: user.id });
-  redirect("/login");
+// ---------------------------------------------------------------- password reset (signed out)
+
+const forgotSchema = z.object({ email: emailSchema });
+
+export async function requestPasswordResetAction(_: FormState, form: FormData): Promise<FormState> {
+  const values = { email: String(form.get("email") ?? "") };
+  return runAction(
+    "requestPasswordReset",
+    async () => {
+      const { email } = parseInput(forgotSchema, form);
+      const meta = await requestMeta();
+      await enforce(`reset-req:ip:${meta.ip ?? "unknown"}`, LIMITS.resetRequestPerIp);
+      // Do the lookup and sending after responding, so response time is identical whether or not
+      // the account exists.
+      after(() => requestPasswordReset(email, meta).catch((err) => log.error("password_reset_request.failed", { err })));
+      return { ok: "If an account exists for that email, we've sent a link to reset the password. It expires in 30 minutes." };
+    },
+    values,
+  );
 }
+
+const resetSchema = z
+  .object({ token: z.string().max(100), password: z.string().max(1000), confirm: z.string().max(1000) })
+  .refine((v) => v.password === v.confirm, { message: "Passwords don't match." });
+
+export async function resetPasswordAction(_: FormState, form: FormData): Promise<FormState> {
+  const result = await runAction("resetPassword", async () => {
+    const input = parseInput(resetSchema, form);
+    await resetPassword(input.token, input.password, await requestMeta());
+    // Any session in this browser belonged to the old password.
+    await clearSessionCookie();
+  });
+  if (result) return result;
+  redirect("/login?reset=1");
+}
+
+// ---------------------------------------------------------------- email verification
+
+export async function verifyEmailAction(token: string): Promise<{ ok: boolean }> {
+  try {
+    const ok = await verifyEmail(token, await requestMeta());
+    if (ok) revalidatePath("/", "layout");
+    return { ok };
+  } catch (err) {
+    log.error("verify_email.failed", { err });
+    return { ok: false };
+  }
+}
+
+export async function resendVerificationAction(_: FormState): Promise<FormState> {
+  return runAction("resendVerification", async () => {
+    const { user } = await requireSession();
+    await resendVerification(user, await requestMeta());
+    return { ok: `Verification email sent to ${user.email}.` };
+  });
+}
+
+// ---------------------------------------------------------------- signed-in account security
 
 const profileSchema = z.object({ name: nameSchema });
 
 export async function updateProfile(_: FormState, form: FormData): Promise<FormState> {
   return runAction("updateProfile", async () => {
-    const user = await requireUser();
+    const { user } = await requireSession();
     const input = parseInput(profileSchema, form);
     await updateUserName(user.id, input.name);
     revalidatePath("/", "layout");
@@ -111,21 +151,55 @@ export async function updateProfile(_: FormState, form: FormData): Promise<FormS
 }
 
 const changePasswordSchema = z
-  .object({ current: z.string().min(1, "Enter your current password."), next: passwordSchema, confirm: z.string() })
+  .object({ current: z.string().min(1, "Enter your current password.").max(1000), next: z.string().max(1000), confirm: z.string().max(1000) })
   .refine((v) => v.next === v.confirm, { message: "New passwords don't match." });
 
 export async function changePassword(_: FormState, form: FormData): Promise<FormState> {
   return runAction("changePassword", async () => {
-    const current = await requireUser();
+    const { user, session } = await requireSession();
     const input = parseInput(changePasswordSchema, form);
-    const user = await findUserById(current.id);
-    if (!user || !(await bcrypt.compare(input.current, user.passwordHash))) {
-      throw new AppError("VALIDATION", "Current password is incorrect.");
-    }
-    // New hash + bumped session version signs out every other device; this one gets a fresh session.
-    const updated = await setPasswordAndRevokeSessions(user.id, await bcrypt.hash(input.next, BCRYPT_ROUNDS));
-    await startSession(updated);
-    log.info("auth.password_changed", { userId: user.id });
-    return { ok: "Password changed. Other devices have been signed out." };
+    const signedOut = await changePasswordFlow(user, input, session.id, await requestMeta());
+    revalidatePath("/settings", "layout");
+    return {
+      ok: signedOut > 0
+        ? `Password changed. ${signedOut} other device${signedOut === 1 ? " was" : "s were"} signed out.`
+        : "Password changed.",
+    };
   });
+}
+
+const sessionIdSchema = z.object({ sessionId: uuidSchema });
+
+export async function signOutSessionAction(_: FormState, form: FormData): Promise<FormState> {
+  let signedOutSelf = false;
+  const result = await runAction("signOutSession", async () => {
+    const { user, session } = await requireSession();
+    const { sessionId } = parseInput(sessionIdSchema, form);
+    await signOutSession(user, sessionId, await requestMeta());
+    if (sessionId === session.id) {
+      signedOutSelf = true;
+      await clearSessionCookie();
+      return;
+    }
+    revalidatePath("/settings/security");
+    return { ok: "Device signed out." };
+  });
+  if (signedOutSelf) redirect("/login");
+  return result;
+}
+
+export async function signOutOtherSessionsAction(_: FormState): Promise<FormState> {
+  return runAction("signOutOtherSessions", async () => {
+    const { user, session } = await requireSession();
+    const n = await signOutOtherSessions(user, session.id, await requestMeta());
+    revalidatePath("/settings/security");
+    return { ok: n === 0 ? "No other devices were signed in." : `Signed out ${n} other device${n === 1 ? "" : "s"}.` };
+  });
+}
+
+export async function logOutEverywhere() {
+  const { user } = await requireSession();
+  await signOutEverywhere(user, await requestMeta());
+  await clearSessionCookie();
+  redirect("/login");
 }

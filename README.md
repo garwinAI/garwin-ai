@@ -33,6 +33,8 @@ npm run dev
 ```
 
 Open http://localhost:3000, then sign up, or log in with your `ADMIN_EMAIL`.
+Without `RESEND_API_KEY`, verification and password-reset emails are printed in the terminal
+running `npm run dev`; copy the link from there.
 Check it's healthy at http://localhost:3000/api/health.
 
 If anything in `.env` is missing or invalid, the server stops at startup and lists exactly which variable is wrong.
@@ -48,7 +50,8 @@ If anything in `.env` is missing or invalid, the server stops at startup and lis
 | `npm run typecheck` | TypeScript |
 | `npm test` | Unit tests (Vitest) |
 | `npm run test:watch` | Unit tests in watch mode |
-| `npm run test:e2e` | Browser tests (Playwright); needs the database and `db:seed` |
+| `npm run test:integration` | Auth/session/rate-limit tests against the database in `DATABASE_URL` |
+| `npm run test:e2e` | Browser tests (Playwright); needs the database and `db:seed`. Uses a local fake Resend server, never real email |
 | `npm run db:generate` | Create a migration after editing `src/db/schema.ts` |
 | `npm run db:migrate` | Apply migrations to `DATABASE_URL` |
 | `npm run db:seed` | Create or promote the Admin from `ADMIN_EMAIL` / `ADMIN_PASSWORD` |
@@ -90,11 +93,23 @@ docs/                  architecture, roadmap
 
 1. vercel.com → **Add New → Project** → import `garwinAI/garwin-ai`, production branch `dev`.
 2. Add environment variables: `DATABASE_URL` (the **pooled** connection string), `AUTH_SECRET` (a new
-   value, not your local one), `APP_URL=https://dev.garwinai.com`.
+   value, not your local one), `APP_URL=https://dev.garwinai.com`, `RESEND_API_KEY`, `EMAIL_FROM`.
 3. Run `npm run db:migrate` and `npm run db:seed` once against that database.
 4. Vercel → Settings → **Domains** → add `dev.garwinai.com`, and copy the CNAME target.
 5. Namecheap → Domain List → garwinai.com → **Advanced DNS** → add **CNAME**, Host `dev`, Value = Vercel's target.
 6. Check `https://dev.garwinai.com/api/health` returns `"status":"ok"`.
+
+## Set up email (Resend)
+
+Password reset and email verification need a real email provider in production; the app won't
+start without one.
+
+1. Create an account at [resend.com](https://resend.com) → **Domains → Add domain** → `garwinai.com`.
+2. Resend shows several DNS records (SPF/DKIM, usually TXT and MX). Add each one in Namecheap →
+   Domain List → garwinai.com → **Advanced DNS** exactly as shown, then click **Verify** in Resend.
+3. Resend → **API Keys → Create** (permission: *Sending access*, domain: garwinai.com).
+4. In Vercel add `RESEND_API_KEY` (the key) and `EMAIL_FROM=Garwin AI <no-reply@garwinai.com>`.
+   Never paste the key into code, chats or commits.
 
 ## Working with Copilot
 

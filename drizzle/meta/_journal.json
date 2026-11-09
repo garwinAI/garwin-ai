@@ -15,6 +15,20 @@
       "when": 1794258209504,
       "tag": "0001_app_installations",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794259505824,
+      "tag": "0002_auth_hardening",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794259510793,
+      "tag": "0003_drop_session_version",
+      "breakpoints": true
     }
   ]
 }

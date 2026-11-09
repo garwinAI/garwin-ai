@@ -2,50 +2,51 @@ import "server-only";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import type { User } from "@/db/schema";
-import { env } from "@/lib/env";
-import { findUserById, toPublicUser, type PublicUser } from "@/server/services/users";
-import type { RequestMeta } from "@/server/services/login-events";
-import { SESSION_COOKIE, SESSION_MAX_AGE, signSession, verifySession } from "./token";
+import { toPublicUser, type PublicUser } from "@/server/services/users";
+import { createSession, SESSION_ABSOLUTE_SEC, validateSessionToken } from "@/server/services/sessions";
+import type { RequestMeta } from "@/server/services/security-events";
+import type { Session } from "@/db/schema";
+import { clearedSessionCookie, sessionCookieAttributes, sessionCookieName } from "./cookie";
 
 export type CurrentUser = PublicUser;
 
-export async function startSession(user: Pick<User, "id" | "role" | "sessionVersion">) {
-  const token = await signSession({ sub: user.id, role: user.role, sv: user.sessionVersion });
+/** Creates a fresh server-side session for the user and sets the cookie. Call after every sign-in. */
+export async function startSession(userId: string, meta: RequestMeta) {
+  const { token, session } = await createSession(userId, meta);
   const jar = await cookies();
-  jar.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: env().NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE,
-  });
+  jar.set(sessionCookieName(), token, sessionCookieAttributes(SESSION_ABSOLUTE_SEC));
+  return session;
 }
 
-export async function endSession() {
-  const jar = await cookies();
-  jar.delete(SESSION_COOKIE);
+/** Deletes the session cookie. Revoking the DB row is the caller's job (see logOut). */
+export async function clearSessionCookie() {
+  (await cookies()).set(clearedSessionCookie());
 }
 
-/** The signed-in user, verified against the database. Cached per request. */
-export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
-  const jar = await cookies();
-  const claims = await verifySession(jar.get(SESSION_COOKIE)?.value);
-  if (!claims) return null;
-  const user = await findUserById(claims.sub);
-  // A changed sessionVersion means the user logged out everywhere or changed their password.
-  if (!user || user.sessionVersion !== claims.sv) return null;
-  return toPublicUser(user);
+/** The current session and user, verified against the database. Cached per request. */
+export const getCurrentSession = cache(async (): Promise<{ user: CurrentUser; session: Session } | null> => {
+  const token = (await cookies()).get(sessionCookieName())?.value;
+  const row = await validateSessionToken(token);
+  return row ? { user: toPublicUser(row.user), session: row.session } : null;
 });
 
-export async function requireUser() {
-  const user = await getCurrentUser();
-  if (!user) {
-    // A cookie that is present but no longer valid must be cleared, or proxy.ts loops.
-    const hasCookie = (await cookies()).has(SESSION_COOKIE);
+export async function getCurrentUser() {
+  return (await getCurrentSession())?.user ?? null;
+}
+
+/** Use in every page, action and route that needs a signed-in user. */
+export async function requireSession() {
+  const current = await getCurrentSession();
+  if (!current) {
+    // A cookie that is present but no longer valid must be cleared, or proxy.ts would loop.
+    const hasCookie = (await cookies()).has(sessionCookieName());
     redirect(hasCookie ? "/api/auth/session-expired" : "/login");
   }
-  return user;
+  return current;
+}
+
+export async function requireUser() {
+  return (await requireSession()).user;
 }
 
 export async function requireAdmin() {

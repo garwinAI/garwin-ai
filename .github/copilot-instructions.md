@@ -48,9 +48,10 @@ Assistant API and system health. Full spec: `docs/ROADMAP.md`.
 4. **Server actions:** wrap the body in `runAction(name, fn, values?)` from `src/lib/actions.ts`.
    Throw `AppError(code, "User-facing message")` for expected failures. Let unexpected errors throw:
    `runAction` logs them and shows a generic message. Return `FormState`.
-5. **Authorization:** every page/action/route that touches user data calls `requireUser()` or
-   `requireAdmin()` from `src/lib/auth/session.ts`. `src/proxy.ts` is only a fast pre-check, never
-   the security boundary. Always scope queries by the current user's id (or their host's id).
+5. **Authorization:** every page/action/route that touches user data calls `requireSession()`,
+   `requireUser()` or `requireAdmin()` from `src/lib/auth/session.ts`. `src/proxy.ts` only checks
+   that a cookie exists; it is never the security boundary. Scope every query by the current
+   user's id (or their host's id) inside the service, never trust ids from the client alone.
 6. **Plans:** check limits with `getEntitlements(user)` from `src/server/services/entitlements.ts`.
    **Never read `user.plan` directly**: team members inherit their host's plan.
 7. **Logging:** use `logger` from `src/lib/logger.ts` (`logger.child({ module })`). Event names are
@@ -103,7 +104,14 @@ an `appSlug` disappear when that app is deactivated.
 - Team members can mark items for deletion but **cannot permanently delete**; only the host can.
 - Garwin AI commission (15%) and upload fees (app $39.99, theme $29.99, widget $19.99) are
   calculated server-side only.
-- Passwords: bcrypt only, never logged, never returned from services (`toPublicUser`).
+- **Auth:** use the flows in `src/server/services/auth.ts`; don't hand-roll password, session or
+  token logic. Passwords: `hashPassword`/`verifyPassword` only, never logged, never returned
+  (`toPublicUser`). Session and email tokens: store only `hashToken()` values, never log them.
+- Clear the session cookie only with `clearedSessionCookie()` (plain delete fails for `__Host-` cookies).
+- Any new state-changing **route handler** (not server action) must check `isSameOrigin()` first.
+- New endpoints that can be abused (sending email, guessing secrets) need a limit from
+  `LIMITS` via `enforce()` in `src/server/services/rate-limit.ts`.
+- Email links carry tokens in the URL fragment (`#token=`), read with `useFragmentToken()`.
 
 ## How to work
 

@@ -25,3 +25,9 @@ export async function pingDatabase(): Promise<boolean> {
     return false;
   }
 }
+
+/** Close the pool (scripts and tests only). */
+export async function closeDatabase() {
+  await pool.end();
+  globalForDb.garwinPool = undefined;
+}
