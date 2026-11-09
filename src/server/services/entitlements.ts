@@ -37,7 +37,11 @@ import {
 
 const log = logger.child({ module: "entitlements" });
 
-type UserRef = { id: string };
+/**
+ * Who is acting, and in which workspace. `accountId` is the workspace the session is viewing
+ * (set by requireUser()). When omitted, the user's own workspace is used.
+ */
+type UserRef = { id: string; accountId?: string | null };
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // ---------------------------------------------------------------- plans
@@ -108,11 +112,11 @@ export type Entitlements = {
 
 /** Everything the signed-in user may use. Cached per request. */
 export const getEntitlements = cache(async (user: UserRef): Promise<Entitlements> => {
-  const [membership] = await db
-    .select({ memberId: accountMembers.id, accountId: accountMembers.accountId, role: accountMembers.role })
-    .from(accountMembers)
-    .where(eq(accountMembers.userId, user.id));
-  if (!membership) throw new Error(`User ${user.id} has no account membership`);
+  const membership = await resolveMembership(user.id, user.accountId);
+  if (!membership) {
+    // Asking for a workspace the user isn't (or is no longer) a member of: cross-account access.
+    throw new AppError("FORBIDDEN", "You don't have access to that workspace.");
+  }
 
   const [planId, granted] = await Promise.all([
     planForAccount(membership.accountId),
@@ -142,6 +146,29 @@ export const getEntitlements = cache(async (user: UserRef): Promise<Entitlements
     hasApp: (slug) => plan.includedApps.includes(slug),
   };
 });
+
+/**
+ * The user's membership in `accountId`, or, when none is requested, in their own workspace
+ * (or their only workspace). Returns null if they aren't a member of the requested account.
+ */
+export async function resolveMembership(userId: string, accountId?: string | null) {
+  const rows = await db
+    .select({ memberId: accountMembers.id, accountId: accountMembers.accountId, role: accountMembers.role })
+    .from(accountMembers)
+    .where(accountId ? and(eq(accountMembers.userId, userId), eq(accountMembers.accountId, accountId)) : eq(accountMembers.userId, userId));
+  if (accountId) return rows[0] ?? null;
+  return rows.find((r) => r.role === "owner") ?? (rows.length === 1 ? rows[0] : null);
+}
+
+/** Every workspace the user belongs to (for the switcher). */
+export async function listMemberships(userId: string) {
+  return db
+    .select({ accountId: accountMembers.accountId, role: accountMembers.role, name: accounts.name })
+    .from(accountMembers)
+    .innerJoin(accounts, eq(accounts.id, accountMembers.accountId))
+    .where(eq(accountMembers.userId, userId))
+    .orderBy(sql`${accountMembers.role} = 'owner' desc`, asc(accounts.name));
+}
 
 // ---------------------------------------------------------------- assertions
 
@@ -299,3 +326,21 @@ export async function acquireAppzoneItem(user: UserRef, itemId: string) {
     return { acquisition, created: true };
   });
 }
+
+/**
+ * Called when an invitation is accepted: the invitation already held a seat, but the host's plan
+ * may have shrunk since. Counts current members only. Must run inside the accepting transaction.
+ */
+export async function assertRoomForNewMember(tx: Tx, accountId: string) {
+  await lockAccount(tx, accountId);
+  const plan = await getPlan(await planForAccount(accountId, tx), tx);
+  const [{ members }] = await tx
+    .select({ members: count() })
+    .from(accountMembers)
+    .where(and(eq(accountMembers.accountId, accountId), eq(accountMembers.role, "member")));
+  if (!hasFreeSeat(members, 0, plan.teamMemberLimit)) {
+    throw new AppError("PLAN_LIMIT", "This team is full on its current plan. Ask the host to upgrade or free up a seat.");
+  }
+}
+
+export type { Tx };

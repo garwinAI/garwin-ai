@@ -6,11 +6,12 @@ import { logIn } from "@/lib/auth/actions";
 import { FormMessage, SubmitButton } from "@/components/ui/form";
 import { TextField } from "@/components/ui/field";
 
-export function LoginForm() {
+export function LoginForm({ next = "" }: { next?: string }) {
   const [state, action] = useActionState(logIn, undefined);
   return (
     <form action={action} className="mt-6 space-y-4">
       <FormMessage state={state} />
+      {next && <input type="hidden" name="next" value={next} />}
       <TextField id="email" label="Email" name="email" defaultValue={state?.values?.email} type="email" autoComplete="email" required />
       <div>
         <TextField id="password" label="Password" name="password" type="password" autoComplete="current-password" required />

@@ -7,8 +7,10 @@ import { createSession, SESSION_ABSOLUTE_SEC, validateSessionToken } from "@/ser
 import type { RequestMeta } from "@/server/services/security-events";
 import type { Session } from "@/db/schema";
 import { clearedSessionCookie, sessionCookieAttributes, sessionCookieName } from "./cookie";
+import { resolveMembership } from "@/server/services/entitlements";
 
-export type CurrentUser = PublicUser;
+/** The signed-in user plus the workspace (account) this session is viewing, already verified. */
+export type CurrentUser = PublicUser & { accountId: string };
 
 /** Creates a fresh server-side session for the user and sets the cookie. Call after every sign-in. */
 export async function startSession(userId: string, meta: RequestMeta) {
@@ -27,7 +29,14 @@ export async function clearSessionCookie() {
 export const getCurrentSession = cache(async (): Promise<{ user: CurrentUser; session: Session } | null> => {
   const token = (await cookies()).get(sessionCookieName())?.value;
   const row = await validateSessionToken(token);
-  return row ? { user: toPublicUser(row.user), session: row.session } : null;
+  if (!row) return null;
+  // Re-check membership on every request: if the user was removed from the team they were
+  // viewing, fall back to their own workspace immediately.
+  const membership =
+    (row.session.activeAccountId ? await resolveMembership(row.user.id, row.session.activeAccountId) : null) ??
+    (await resolveMembership(row.user.id));
+  if (!membership) return null;
+  return { user: { ...toPublicUser(row.user), accountId: membership.accountId }, session: row.session };
 });
 
 export async function getCurrentUser() {

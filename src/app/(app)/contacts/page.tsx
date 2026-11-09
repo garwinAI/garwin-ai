@@ -7,6 +7,7 @@ import { PageBody, PageHeader } from "@/components/ui/page-header";
 import { PlannedBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeactivatedApp } from "@/components/deactivated-app";
+import { NoAccess } from "@/components/no-access";
 
 export const metadata: Metadata = { title: "Contacts" };
 
@@ -15,6 +16,7 @@ export default async function ContactsPage() {
   if (!(await isAppActive(user, "contacts"))) {
     return <DeactivatedApp name="Contacts" canManage={(await getEntitlements(user)).canManageApps} />;
   }
+  if (!(await getEntitlements(user)).can("contacts.view")) return <NoAccess title="Contacts" what="view contacts" />;
   return (
     <>
       <PageHeader title="Contacts" description="People you work with." actions={<PlannedBadge phase={3} />} />

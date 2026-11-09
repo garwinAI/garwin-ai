@@ -70,6 +70,9 @@ export const sessions = pgTable(
     lastSeenAt: ts("last_seen_at").notNull().defaultNow(),
     expiresAt: ts("expires_at").notNull(),
     revokedAt: ts("revoked_at"),
+    // Which workspace this session is viewing. Re-validated against membership on every request.
+    // (FK declared in SQL: accounts.ts imports this file, so a Drizzle reference would be circular.)
+    activeAccountId: uuid("active_account_id"),
   },
   (t) => [index("sessions_user_idx").on(t.userId)],
 );

@@ -55,7 +55,7 @@ test("settings sections follow the spec order", async ({ page }) => {
   await signUp(page);
   await page.goto("/settings");
   const tabs = page.getByRole("navigation", { name: "Settings sections" }).getByRole("link");
-  await expect(tabs).toHaveText(["General", "Payments", "Cards", "Apps", "Security", "Passwords", "IP History"]);
+  await expect(tabs).toHaveText(["General", "Team", "Payments", "Cards", "Apps", "Security", "Passwords", "IP History"]);
   await expect(tabs.first()).toHaveAttribute("aria-current", "page");
 });
 

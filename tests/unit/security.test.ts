@@ -126,3 +126,16 @@ describe("email configuration", () => {
     expect(() => env()).toThrowError(/MAIL_LOG_FILE/);
   });
 });
+
+import { safeNextPath } from "@/lib/security/redirect";
+
+describe("safe redirect after login", () => {
+  it.each([
+    ["/invite", "/invite"],
+    ["/storage?folder=abc", "/storage?folder=abc"],
+  ])("allows %s", (input, out) => expect(safeNextPath(input)).toBe(out));
+
+  it.each(["//evil.com", "https://evil.com", "/\\evil.com", "javascript:alert(1)", "", "relative", "/a\nb", undefined, 42])("rejects %s", (input) => {
+    expect(safeNextPath(input)).toBe("/assistant");
+  });
+});

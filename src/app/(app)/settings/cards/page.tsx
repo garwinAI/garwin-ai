@@ -2,10 +2,20 @@ import type { Metadata } from "next";
 import { CreditCard } from "lucide-react";
 import { CardSection } from "@/components/ui/card";
 import { PlannedBadge } from "@/components/ui/badge";
+import { requireUser } from "@/lib/auth/session";
+import { getEntitlements } from "@/server/services/entitlements";
 
 export const metadata: Metadata = { title: "Cards" };
 
-export default function CardsSettings() {
+export default async function CardsSettings() {
+  const ent = await getEntitlements(await requireUser());
+  if (!ent.canManageBilling) {
+    return (
+      <CardSection id="cards" title="Payment cards">
+        <p className="text-sm text-neutral-600">Only your account host can manage payment cards for this workspace.</p>
+      </CardSection>
+    );
+  }
   return (
     <CardSection
       id="cards"

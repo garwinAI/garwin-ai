@@ -11,7 +11,16 @@ export const metadata: Metadata = { title: "Payments" };
 
 export default async function PaymentsSettings() {
   const user = await requireUser();
-  const [{ plan: currentPlan, canManageBilling }, allPlans] = await Promise.all([getEntitlements(user), listPlans()]);
+  const [ent, allPlans] = await Promise.all([getEntitlements(user), listPlans()]);
+  const { plan: currentPlan, canManageBilling } = ent;
+  // Only the host manages billing. Members with billing.view may see the plan, nothing else.
+  if (!canManageBilling && !ent.can("billing.view")) {
+    return (
+      <CardSection id="billing" title="Billing">
+        <p className="text-sm text-neutral-600">Your account host manages the plan and billing for this workspace.</p>
+      </CardSection>
+    );
+  }
   return (
     <>
       <CardSection

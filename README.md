@@ -113,6 +113,16 @@ start without one.
 4. In Vercel add `RESEND_API_KEY` (the key) and `EMAIL_FROM=Garwin AI <no-reply@garwinai.com>`.
    Never paste the key into code, chats or commits.
 
+## Set up SMS invitations (Twilio)
+
+Optional. Without it, hosts can still invite by email.
+
+1. Create an account at [twilio.com](https://www.twilio.com) and buy a phone number with SMS.
+2. For US recipients, complete **A2P 10DLC** registration (Messaging → Regulatory Compliance);
+   unregistered US traffic gets blocked by carriers.
+3. In Vercel add `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_FROM` (the number in
+   `+1...` form, or a Messaging Service SID starting with `MG`). Never commit or share the token.
+
 ## Working with Copilot
 
 Use Agent mode with one task at a time. Copilot automatically reads

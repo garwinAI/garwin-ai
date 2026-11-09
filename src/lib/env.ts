@@ -27,6 +27,15 @@ const schema = z
     // Development/test only: also append sent emails as JSON lines to this file (used by e2e tests).
     MAIL_LOG_FILE: optional,
 
+    // SMS (Twilio). Optional: without it, SMS invitations are unavailable in production and
+    // printed to the terminal in development.
+    TWILIO_ACCOUNT_SID: optional,
+    TWILIO_AUTH_TOKEN: optional,
+    // A Twilio phone number (+15551234567) or Messaging Service SID (MG...).
+    TWILIO_FROM: optional,
+    // Override only for tests (points e2e runs at a local fake Twilio server).
+    TWILIO_API_BASE: z.url().default("https://api.twilio.com"),
+
     // Integrations added in later phases. Optional until their phase ships.
     STRIPE_SECRET_KEY: optional,
     STRIPE_WEBHOOK_SECRET: optional,
@@ -43,6 +52,10 @@ const schema = z
         path: ["RESEND_API_KEY"],
         message: "Production needs a real email provider: set RESEND_API_KEY (password reset and verification send email)",
       });
+    }
+    const twilio = [e.TWILIO_ACCOUNT_SID, e.TWILIO_AUTH_TOKEN, e.TWILIO_FROM].filter(Boolean).length;
+    if (twilio > 0 && twilio < 3) {
+      ctx.addIssue({ code: "custom", path: ["TWILIO_ACCOUNT_SID"], message: "Set all of TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM, or none" });
     }
     if (e.NODE_ENV === "production" && e.MAIL_LOG_FILE) {
       ctx.addIssue({ code: "custom", path: ["MAIL_LOG_FILE"], message: "MAIL_LOG_FILE must not be set in production (it would write emails with secret links to disk)" });

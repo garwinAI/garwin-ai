@@ -39,6 +39,7 @@
 | 1b | Responsive shell, accessible UI components, real app activation + app settings, no faked data | ✅ Done |
 | 1.5 | Auth: DB sessions, password reset, email verification (Resend), rate limiting, CSRF checks, device management, activity history | ✅ Done |
 | 1.5b | Data model: accounts/teams/permissions/invitations, plans/prices/subscriptions/payments, storage, AppZone, messaging, support, audit; central entitlement service | ✅ Done |
+| 3a | Teams: email/SMS invitations, permissions, workspace switching, shared storage folders with mark-for-deletion, host/team messaging | ✅ Done |
 | 1.6 | Deploy to dev.garwinai.com (Vercel + Neon + Resend), CSP header, data retention jobs | Next |
 | 2 | Billing: Admin-set prices, Stripe Checkout (monthly/yearly), customer portal, signed idempotent webhooks | |
 | 3 | Core apps: Storage (R2, shared quota, permissions, mark-for-deletion), Calendar, Contacts, Messages, notifications, teams | |

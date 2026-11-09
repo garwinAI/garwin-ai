@@ -6,6 +6,7 @@ import type { CalendarSettings } from "@/lib/apps";
 import { PageBody, PageHeader } from "@/components/ui/page-header";
 import { PlannedBadge } from "@/components/ui/badge";
 import { DeactivatedApp } from "@/components/deactivated-app";
+import { NoAccess } from "@/components/no-access";
 import { MonthView } from "./month-view";
 
 export const metadata: Metadata = { title: "Calendar" };
@@ -16,6 +17,7 @@ export default async function CalendarPage() {
   if (!installed?.active) {
     return <DeactivatedApp name="Calendar" canManage={(await getEntitlements(user)).canManageApps} />;
   }
+  if (!(await getEntitlements(user)).can("calendar.view")) return <NoAccess title="Calendar" what="view the calendar" />;
   const settings = installed.settings as CalendarSettings;
   return (
     <>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LoginForm } from "./login-form";
+import { safeNextPath } from "@/lib/security/redirect";
 
 export const metadata: Metadata = { title: "Log in" };
 
@@ -21,10 +22,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           {NOTICES[notice]}
         </p>
       )}
-      <LoginForm />
+      <LoginForm next={typeof params.next === "string" ? safeNextPath(params.next, "") : ""} />
       <p className="mt-6 text-center text-sm text-neutral-500">
         New to Garwin AI?{" "}
-        <Link href="/signup" className="font-medium text-brand-600 hover:underline">Create a free account</Link>
+        <Link href={typeof params.next === "string" ? `/signup?next=${encodeURIComponent(safeNextPath(params.next))}` : "/signup"} className="font-medium text-brand-600 hover:underline">
+          Create a free account
+        </Link>
       </p>
     </>
   );
