@@ -37,7 +37,8 @@
 | 1 | Shell, design, navigation, floating Assistant UI, auth, roles, IP history, Admin health | ✅ Done |
 | 1a | Foundation: env, logging, errors, validation, services, tests, CI, docs, AI instructions | ✅ Done |
 | 1b | Responsive shell, accessible UI components, real app activation + app settings, no faked data | ✅ Done |
-| 1.5 | Hardening: password reset + email verification, lockout redesign, CSP, signup rate limit, deploy to dev.garwinai.com | Next |
+| 1.5 | Auth: DB sessions, password reset, email verification (Resend), rate limiting, CSRF checks, device management, activity history | ✅ Done |
+| 1.6 | Deploy to dev.garwinai.com (Vercel + Neon + Resend), CSP header, data retention jobs | Next |
 | 2 | Billing: Admin-set prices, Stripe Checkout (monthly/yearly), customer portal, signed idempotent webhooks | |
 | 3 | Core apps: Storage (R2, shared quota, permissions, mark-for-deletion), Calendar, Contacts, Messages, notifications, teams | |
 | 4 | Workspace: draggable/resizable widgets, themes, Pages menu | |
@@ -47,7 +48,7 @@
 
 ## Open decisions (owner)
 
-- Hosting: Vercel + Neon (Postgres) + Cloudflare R2 + Resend proposed; not yet confirmed.
+- Hosting: Vercel + Neon (Postgres) + Cloudflare R2 proposed; not yet confirmed. Email: **Resend (confirmed)**.
 - Separate domain for sandboxed AppZone items (e.g. `garwinapps.com`).
 - Free users buying paid AppZone items; meaning of "eligible" downloads on paid plans.
 - Whether Wordbase/Codebase/Spreadsheets are full apps in v1.

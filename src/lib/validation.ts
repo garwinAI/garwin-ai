@@ -5,10 +5,8 @@ import { AppError } from "./errors";
 
 export const emailSchema = z.string().trim().toLowerCase().email("Enter a valid email address.").max(254);
 
-export const passwordSchema = z
-  .string()
-  .min(10, "Password must be at least 10 characters.")
-  .max(200, "Password is too long.");
+// Password rules live with the hashing code so they can't drift apart.
+export { passwordSchema } from "./security/password";
 
 export const nameSchema = z.string().trim().min(1, "Enter your name.").max(80, "Name is too long.");
 

@@ -31,19 +31,28 @@ Messages, an AI provider for the Assistant, and a **separate domain** for sandbo
 5. `runAction` turns `AppError` into a form message, re-throws Next.js redirects, and logs
    unexpected errors while showing a generic message.
 
-## Authentication
+## Authentication and account security
 
-| Piece | Where | Notes |
-| --- | --- | --- |
-| Password hashing | `bcryptjs`, 12 rounds | Dummy hash compared for unknown emails (timing) |
-| Session token | `src/lib/auth/token.ts` | HS256 JWT, 7 days, httpOnly, SameSite=Lax, Secure in prod |
-| Revocation | `users.session_version` | Bumped on password change and "log out of all devices" |
-| Throttling | `login_events` | 8 failures / 15 min per email or IP (to be improved in Phase 1.5) |
-| CSRF | Next.js Server Actions | Built-in Origin/Host check |
-| IP address | `x-forwarded-for` | Trustworthy on Vercel only; see note in `session.ts` |
+All flows live in `src/server/services/auth.ts` (framework-independent, integration-tested);
+`src/lib/auth/actions.ts` only parses input, calls them and manages the cookie.
 
-Roles: `users.role` (`member` | `admin`), `users.host_id` (set for team members),
-`users.developer_status` (AppZone developer applications).
+| Concern | Implementation |
+| --- | --- |
+| Password hashing | bcrypt cost 12 (`src/lib/security/password.ts`); hashes upgraded on login if the cost rises; dummy hash compared for unknown emails so timing doesn't reveal accounts |
+| Password policy | 10+ chars, max 72 bytes (bcrypt limit, rejected rather than silently truncated), not a common password, not containing the email name, enough distinct characters |
+| Sessions | Database rows (`sessions`). Cookie holds a random 256-bit token; DB stores only `HMAC-SHA256(AUTH_SECRET, token)`. New session on every sign-in (no fixation). Idle timeout 7 days, absolute 30 days |
+| Cookie | `httpOnly`, `SameSite=Lax`, `Secure` + `__Host-` prefix in production. Delete it only with `clearedSessionCookie()` (browsers ignore deleting a `__Host-` cookie without `Secure`) |
+| Revocation | Logout revokes the row. Users can sign out one device, all others, or everywhere. Password change signs out other devices; password reset signs out all |
+| Email verification | Users can use the app before verifying (banner + resend). Link valid 24h, single use |
+| Password reset | "If an account exists…" response for every email (no enumeration); lookup and sending happen after the response (`after()`), so timing is identical. Link valid 30 min, single use; a weak new password doesn't burn the link; success emails a "password changed" notice |
+| Email links | Token in the URL **fragment** (`#token=`), which browsers never send to servers, logs or `Referer`; stripped from the address bar after reading. Tokens stored as HMACs (`auth_tokens`), consumed atomically |
+| Rate limiting | Postgres fixed-window counters (`rate_limits`), one atomic upsert per hit, so it works across serverless instances. Login: 5 per email+IP / 15 min, 30 per IP / 15 min, 50 per email / hour (an attacker on one network can't lock the owner out). Also sign-up, reset requests/submissions, verification resends, password changes. Limits in `LIMITS` in `src/server/services/rate-limit.ts` |
+| CSRF | Server Actions: Next.js rejects POSTs whose Origin doesn't match Host; cookie is `SameSite=Lax`. Custom POST route handlers must call `isSameOrigin()` (`src/lib/security/origin.ts`). `/api/auth/session-expired` only clears cookies that are already invalid |
+| Authorization | `requireSession()` / `requireUser()` / `requireAdmin()` in every page, action and route. `src/proxy.ts` only checks cookie presence for fast redirects. Service queries are scoped by user id (e.g. a user can't revoke another user's session) |
+| Secrets never exposed | `toPublicUser()` strips the password hash; tokens are never logged (logger redacts `token`/`password`/`cookie`/… keys; email bodies aren't logged in production) |
+| Activity history | `login_events` stores sign-ins (success/failure) and security changes with IP and user agent; shown in Settings → IP History |
+| Email | `src/server/email/send.ts`: Resend over HTTPS in production (startup fails without `RESEND_API_KEY`); dev prints to the terminal |
+| IP address | `x-forwarded-for`, trustworthy on Vercel (platform overwrites it); spoofable on hosts that don't |
 
 ## Plans and entitlements
 
@@ -97,10 +106,9 @@ request. `.env.example` lists every variable with placeholders.
 | Static checks | ESLint, tsc | n/a | `npm run lint`, `npm run typecheck` |
 | Everything in CI | GitHub Actions | `.github/workflows/ci.yml` | runs on pushes to main/dev and PRs |
 
-## Known limitations (tracked for Phase 1.5)
+## Known limitations
 
-- No password reset or email verification yet (needs an email provider).
-- Login lockout can be triggered by someone else for a given email; replace with progressive delays.
-- No Content-Security-Policy header yet; no signup rate limit.
-- Health "online" is assumed; real dependency checks come with Admin (Phase 6).
-- `login_events` has no retention policy yet.
+- No two-factor authentication yet (Phase 6) and no email-address change flow.
+- No Content-Security-Policy header yet.
+- Sign-up reveals whether an email is registered ("already exists"); mitigated by the per-IP sign-up limit.
+- `login_events`, revoked `sessions` and used `auth_tokens` have no retention/cleanup job yet.

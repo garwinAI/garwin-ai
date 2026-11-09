@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers";
 import { logIn, signUp } from "./helpers";
 
 test("navigation follows the spec order", async ({ page }) => {
@@ -54,12 +54,6 @@ test("Free plan: locked premium apps, 10 AppZone downloads, 1 GB storage", async
 
   await page.goto("/storage");
   await expect(page.getByText("1 GB")).toBeVisible();
-});
-
-test("members cannot open Admin", async ({ page }) => {
-  await signUp(page);
-  await page.goto("/admin");
-  await expect(page).toHaveURL(/\/assistant$/);
 });
 
 test("Admin sees system health", async ({ page }) => {

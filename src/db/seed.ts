@@ -17,7 +17,7 @@ async function main() {
   const db = drizzle(pool);
   const [existing] = await db.select().from(users).where(eq(users.email, email));
   if (existing) {
-    await db.update(users).set({ role: "admin", updatedAt: new Date() }).where(eq(users.id, existing.id));
+    await db.update(users).set({ role: "admin", emailVerifiedAt: existing.emailVerifiedAt ?? new Date(), updatedAt: new Date() }).where(eq(users.id, existing.id));
     console.log(`Promoted ${email} to admin.`);
   } else {
     await db.insert(users).values({
@@ -25,6 +25,8 @@ async function main() {
       name: "Admin",
       passwordHash: await bcrypt.hash(password, 12),
       role: "admin",
+      // The operator chose this address in the environment, so treat it as verified.
+      emailVerifiedAt: new Date(),
     });
     console.log(`Created admin ${email}.`);
   }
