@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/session";
+import { getEntitlements } from "@/server/services/entitlements";
 import { BUILT_IN_APPS, appIncludedInPlan } from "@/lib/apps";
 import { Section } from "../section";
 
@@ -8,7 +9,8 @@ export const metadata: Metadata = { title: "App settings" };
 
 export default async function AppsSettings() {
   const user = await requireUser();
-  const apps = BUILT_IN_APPS.filter((a) => appIncludedInPlan(a, user.plan));
+  const { plan } = await getEntitlements(user);
+  const apps = BUILT_IN_APPS.filter((a) => appIncludedInPlan(a, plan.id));
   return (
     <Section title="Your apps" description="Settings for each app. Apps added from AppZone can be deactivated here.">
       <ul className="divide-y divide-neutral-100">

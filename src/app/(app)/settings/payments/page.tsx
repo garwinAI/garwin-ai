@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Check } from "lucide-react";
 import { ComingSoon } from "@/components/page-header";
 import { requireUser } from "@/lib/auth/session";
+import { getEntitlements } from "@/server/services/entitlements";
 import { PLANS, PLAN_ORDER } from "@/lib/plans";
 import { Section } from "../section";
 
@@ -9,13 +10,14 @@ export const metadata: Metadata = { title: "Payments" };
 
 export default async function PaymentsSettings() {
   const user = await requireUser();
+  const { plan: currentPlan } = await getEntitlements(user);
   return (
     <>
       <Section title="Your plan" description="Paid plans bill monthly or yearly. Prices are set by Admin.">
         <div className="grid gap-3 sm:grid-cols-2">
           {PLAN_ORDER.map((id) => {
             const plan = PLANS[id];
-            const current = id === user.plan;
+            const current = id === currentPlan.id;
             return (
               <div key={id} className={`rounded-xl border p-4 ${current ? "border-brand-600 ring-2 ring-brand-100" : "border-neutral-200"}`}>
                 <div className="flex items-center justify-between">
@@ -36,7 +38,7 @@ export default async function PaymentsSettings() {
                 </ul>
                 {!current && (
                   <button className="btn-primary mt-4 w-full" disabled>
-                    {PLAN_ORDER.indexOf(id) > PLAN_ORDER.indexOf(user.plan) ? "Upgrade" : "Switch"}
+                    {PLAN_ORDER.indexOf(id) > PLAN_ORDER.indexOf(currentPlan.id) ? "Upgrade" : "Switch"}
                   </button>
                 )}
               </div>

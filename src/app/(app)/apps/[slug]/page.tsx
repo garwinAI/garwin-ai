@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Lock } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
+import { getEntitlements } from "@/server/services/entitlements";
 import { appIncludedInPlan, getBuiltInApp } from "@/lib/apps";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -17,7 +18,8 @@ export default async function AppDetailPage({ params }: Props) {
   const app = getBuiltInApp((await params).slug);
   if (!app) notFound();
   const user = await requireUser();
-  const included = appIncludedInPlan(app, user.plan);
+  const { plan } = await getEntitlements(user);
+  const included = appIncludedInPlan(app, plan.id);
 
   return (
     <div className="p-8">

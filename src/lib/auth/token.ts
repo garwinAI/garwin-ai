@@ -1,5 +1,6 @@
 // Edge-safe session token helpers (used by both proxy.ts and server code).
 import { SignJWT, jwtVerify } from "jose";
+import { env } from "@/lib/env";
 
 export const SESSION_COOKIE = "garwin_session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -11,9 +12,7 @@ export type SessionClaims = {
 };
 
 function secret() {
-  const value = process.env.AUTH_SECRET;
-  if (!value || value.length < 32) throw new Error("AUTH_SECRET must be set (32+ characters)");
-  return new TextEncoder().encode(value);
+  return new TextEncoder().encode(env().AUTH_SECRET);
 }
 
 export async function signSession(claims: SessionClaims) {

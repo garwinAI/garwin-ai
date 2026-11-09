@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { desc, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { loginEvents } from "@/db/schema";
 import { requireUser } from "@/lib/auth/session";
+import { listLoginEvents } from "@/server/services/login-events";
 import { Section } from "../section";
 import { LocalTime } from "@/components/local-time";
 
@@ -17,12 +15,7 @@ function describeAgent(ua: string | null) {
 
 export default async function IpHistory() {
   const user = await requireUser();
-  const events = await db
-    .select()
-    .from(loginEvents)
-    .where(eq(loginEvents.userId, user.id))
-    .orderBy(desc(loginEvents.createdAt))
-    .limit(50);
+  const events = await listLoginEvents(user.id, 50);
 
   return (
     <Section title="IP history" description="Recent sign-in attempts on your account (last 50).">

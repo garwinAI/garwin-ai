@@ -3,12 +3,14 @@ import Link from "next/link";
 import { Lock, Store } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/auth/session";
+import { getEntitlements } from "@/server/services/entitlements";
 import { BUILT_IN_APPS, appIncludedInPlan } from "@/lib/apps";
 
 export const metadata: Metadata = { title: "Apps" };
 
 export default async function AppsPage() {
   const user = await requireUser();
+  const { plan } = await getEntitlements(user);
   return (
     <>
       <PageHeader
@@ -22,7 +24,7 @@ export default async function AppsPage() {
       />
       <div className="grid gap-4 p-8 sm:grid-cols-2 xl:grid-cols-4">
         {BUILT_IN_APPS.map((app) => {
-          const included = appIncludedInPlan(app, user.plan);
+          const included = appIncludedInPlan(app, plan.id);
           return (
             <Link key={app.slug} href={`/apps/${app.slug}`} className="card group overflow-hidden transition-shadow hover:shadow-md">
               <div className={`h-24 bg-gradient-to-br ${app.color} ${included ? "" : "opacity-50 grayscale"}`} />

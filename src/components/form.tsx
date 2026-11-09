@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import type { FormState } from "@/lib/auth/actions";
+import type { FormState } from "@/lib/actions";
 
 export function SubmitButton({
   children,

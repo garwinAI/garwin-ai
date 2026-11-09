@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { FolderOpen } from "lucide-react";
 import { ComingSoon, EmptyState, PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/auth/session";
-import { PLANS } from "@/lib/plans";
+import { getEntitlements } from "@/server/services/entitlements";
 
 export const metadata: Metadata = { title: "Storage" };
 
 export default async function StoragePage() {
   const user = await requireUser();
-  const plan = PLANS[user.plan];
-  const usedGb = 0;
+  const { plan } = await getEntitlements(user);
+    const usedGb = 0;
   const pct = (usedGb / plan.storageGb) * 100;
 
   return (

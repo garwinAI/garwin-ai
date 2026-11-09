@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Code2, LayoutGrid, Palette, PanelsTopLeft, Store } from "lucide-react";
 import { ComingSoon, EmptyState, PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/auth/session";
-import { PLANS } from "@/lib/plans";
+import { getEntitlements } from "@/server/services/entitlements";
 
 export const metadata: Metadata = { title: "AppZone" };
 
@@ -14,7 +14,8 @@ const CATEGORIES = [
 
 export default async function AppZonePage() {
   const user = await requireUser();
-  const limit = PLANS[user.plan].appZoneDownloads;
+  const { plan } = await getEntitlements(user);
+  const limit = plan.appZoneDownloads;
 
   return (
     <>

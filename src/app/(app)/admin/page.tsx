@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { count, eq, sql } from "drizzle-orm";
-import { db } from "@/db";
-import { users } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/session";
+import { env } from "@/lib/env";
+import { getMemberStats } from "@/server/services/admin-stats";
 import { PLANS, PLAN_ORDER } from "@/lib/plans";
 import { computeHealth, HEALTH_STYLES } from "@/lib/health";
 import { ComingSoon, PageHeader } from "@/components/page-header";
@@ -23,18 +22,15 @@ const UPCOMING = [
 export default async function AdminPage() {
   await requireAdmin();
 
-  const [{ total }] = await db.select({ total: count() }).from(users);
-  const [{ teamMembers }] = await db.select({ teamMembers: count() }).from(users).where(sql`${users.hostId} is not null`);
-  const [{ developers }] = await db.select({ developers: count() }).from(users).where(eq(users.developerStatus, "approved"));
-  const byPlan = await db.select({ plan: users.plan, n: count() }).from(users).groupBy(users.plan);
-  const planCount = Object.fromEntries(byPlan.map((r) => [r.plan, r.n]));
+  const { total, teamMembers, developers, perPlan: planCount } = await getMemberStats();
+  const config = env();
 
   const health = computeHealth({
     online: true,
     critical: false,
     significantIssue: false,
-    paymentsConfigured: Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET),
-    assistantConfigured: Boolean(process.env.ASSISTANT_API_KEY),
+    paymentsConfigured: Boolean(config.STRIPE_SECRET_KEY && config.STRIPE_WEBHOOK_SECRET),
+    assistantConfigured: Boolean(config.ASSISTANT_API_KEY),
     oldestOpenTicketHours: null, // support tickets arrive in Phase 6
   });
   const style = HEALTH_STYLES[health.level];
