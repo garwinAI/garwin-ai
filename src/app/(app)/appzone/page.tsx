@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Code2, LayoutGrid, Palette, PanelsTopLeft, Store } from "lucide-react";
-import { ComingSoon, EmptyState, PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/auth/session";
 import { getEntitlements } from "@/server/services/entitlements";
+import { PageBody, PageHeader } from "@/components/ui/page-header";
+import { PlannedBadge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Card } from "@/components/ui/card";
 
 export const metadata: Metadata = { title: "AppZone" };
 
@@ -15,50 +18,45 @@ const CATEGORIES = [
 export default async function AppZonePage() {
   const user = await requireUser();
   const { plan } = await getEntitlements(user);
-  const limit = plan.appZoneDownloads;
+  const allowance =
+    plan.appZoneDownloads === null
+      ? `Unlimited eligible downloads on ${plan.name}`
+      : `${plan.appZoneDownloads} free downloads on ${plan.name}`;
 
   return (
     <>
       <PageHeader
         title="AppZone"
         description="Apps, widgets and themes for your workspace, from Garwin AI and approved developers."
-        actions={<ComingSoon phase={5} />}
+        actions={<PlannedBadge phase={5} />}
       />
-      <div className="space-y-6 p-8">
+      <PageBody>
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex gap-2">
-            {CATEGORIES.map(({ icon: Icon, label }, i) => (
-              <span
-                key={label}
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm ${
-                  i === 0 ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 bg-white text-neutral-700"
-                }`}
-              >
-                <Icon className="h-4 w-4" /> {label}
-              </span>
+          <ul className="flex flex-wrap gap-2" aria-label="Categories">
+            {CATEGORIES.map(({ icon: Icon, label }) => (
+              <li key={label} className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-1.5 text-sm text-neutral-700">
+                <Icon className="h-4 w-4" aria-hidden="true" /> {label}
+              </li>
             ))}
-          </div>
-          <p className="text-sm text-neutral-500">
-            Free downloads used:{" "}
-            <span className="font-medium text-neutral-900">{limit === null ? "Unlimited" : `0 of ${limit}`}</span>
-          </p>
+          </ul>
+          <p className="text-sm text-neutral-500">{allowance}</p>
         </div>
         <EmptyState
           icon={Store}
-          title="The marketplace is being stocked"
-          body="Developers can apply, get approved by Admin and publish apps, widgets and themes here."
+          title="No items listed yet"
+          body="The marketplace opens once developers can apply, get approved by Admin, and publish."
         />
-        <div className="card flex items-center justify-between gap-4 p-5">
+        <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <Code2 className="h-5 w-5 text-accent-500" />
+            <Code2 className="h-5 w-5 shrink-0 text-accent-500" aria-hidden="true" />
             <div>
               <p className="font-medium">Build for AppZone</p>
-              <p className="text-sm text-neutral-500">Apply to become a developer and sell your apps, widgets and themes.</p>
+              <p className="text-sm text-neutral-500">Developer applications open in Phase 5.</p>
             </div>
           </div>
-          <button className="btn-secondary" disabled>Apply · Phase 5</button>
-        </div>
-      </div>
+          <PlannedBadge phase={5} />
+        </Card>
+      </PageBody>
     </>
   );
 }

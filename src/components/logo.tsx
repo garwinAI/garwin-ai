@@ -20,7 +20,7 @@ export function Logo({ collapsed = false }: { collapsed?: boolean }) {
     <span className="flex items-center gap-2.5">
       <LogoMark />
       {!collapsed && (
-        <span className="text-[15px] font-semibold tracking-tight text-neutral-900">
+        <span data-logo className="text-[15px] font-semibold tracking-tight text-neutral-900">
           Garwin <span className="text-accent-500">AI</span>
         </span>
       )}

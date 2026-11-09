@@ -9,9 +9,13 @@ export type Entitlements = {
   /** Only the host may permanently delete shared files or manage billing */
   canManageBilling: boolean;
   canPermanentlyDelete: boolean;
+  /** Only the host may activate/deactivate apps or change app settings for the team */
+  canManageApps: boolean;
+  /** The account that owns plan, storage and apps (the host's id for team members) */
+  accountId: string;
 };
 
-export function resolveEntitlements(user: { plan: PlanId; hostId: string | null }, hostPlan?: PlanId): Entitlements {
+export function resolveEntitlements(user: { id: string; plan: PlanId; hostId: string | null }, hostPlan?: PlanId): Entitlements {
   const isTeamMember = user.hostId !== null;
   if (isTeamMember && !hostPlan) {
     throw new Error("Team member entitlements need the host's plan");
@@ -22,5 +26,7 @@ export function resolveEntitlements(user: { plan: PlanId; hostId: string | null 
     isTeamMember,
     canManageBilling: !isTeamMember,
     canPermanentlyDelete: !isTeamMember,
+    canManageApps: !isTeamMember,
+    accountId: user.hostId ?? user.id,
   };
 }

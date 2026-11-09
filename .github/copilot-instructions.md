@@ -25,7 +25,9 @@ Assistant API and system health. Full spec: `docs/ROADMAP.md`.
 | --- | --- |
 | `src/app/**` | Routes only: pages, layouts, route handlers. Keep them thin. |
 | `src/app/(auth)` / `src/app/(app)` | Signed-out pages / signed-in workspace (sidebar layout) |
-| `src/components/` | Reusable UI. Client components only where interactivity needs it. |
+| `src/components/ui/` | Shared accessible primitives (see table below). Use these before writing new markup. |
+| `src/components/shell/` | App frame: responsive sidebar, mobile drawer, nav config (`nav.ts`) |
+| `src/components/` | Feature components (assistant, deactivated-app, logo) |
 | `src/server/services/` | **All database access.** One file per domain (`users.ts`, ...). Starts with `import "server-only"`. |
 | `src/lib/` | Shared logic with no DB access: `env`, `logger`, `errors`, `validation`, `actions`, `plans`, `entitlements`, `health` |
 | `src/lib/auth/` | Sessions, tokens and auth server actions |
@@ -54,12 +56,39 @@ Assistant API and system health. Full spec: `docs/ROADMAP.md`.
 7. **Logging:** use `logger` from `src/lib/logger.ts` (`logger.child({ module })`). Event names are
    `noun.verb` (`checkout.created`). Log ids, not personal data. No `console.log` in app code.
 8. **Errors in UI:** route segments have `error.tsx` boundaries. Show friendly messages, never stack traces.
-9. **Styling:** Tailwind utilities plus the classes in `src/app/globals.css` (`btn-primary`,
-   `btn-secondary`, `btn-danger`, `input`, `label`, `card`). Brand: grayscale surfaces, **blue**
-   (`brand-*`) for actions, **orange** (`accent-*`) for highlights only.
-10. **Accessibility:** real `<button>`/`<a>`, labels on every input, `aria-label` on icon buttons.
-11. **Tests:** add or update tests with every change. Pure logic -> unit test; user flow -> e2e.
+9. **Styling:** use the `src/components/ui` components and the classes in `src/app/globals.css`.
+   Brand: grayscale surfaces, **blue** (`brand-*`) for actions, **orange** (`accent-*`) for highlights.
+   Orange **text** must use `text-accent-700` (contrast); `accent-500/600` are for fills, icons, dots.
+   Layouts must work from 360px wide: mobile first, `sm:`/`lg:` for larger screens, no horizontal scroll.
+10. **Accessibility (WCAG 2.1 AA):** real `<button>`/`<a>`; every input has a label (`TextField`,
+    `SelectField`); icon-only buttons use `IconButton` (label required); one `<h1>` per page
+    (`PageHeader`); mark the current item with `aria-current`; decorative icons get `aria-hidden`.
+    E2E tests run axe on key pages and fail on serious/critical violations.
+11. **Never fake backend behavior.** No invented numbers, canned replies or pretend success. If a
+    feature isn't built, show an honest state (`PlannedBadge`, disabled control with the reason)
+    and leave the real logic for its phase.
+12. **Tests:** add or update tests with every change. Pure logic -> unit test; user flow -> e2e.
     Run `npm run check` before finishing. E2E needs a database: `npm run test:e2e`.
+
+## UI building blocks (`src/components/ui`)
+
+| Component | Use for |
+| --- | --- |
+| `Button`, `ButtonLink`, `buttonClasses` | Actions (`variant`: primary, secondary, danger, ghost; `size`: sm, md, lg). Links that look like buttons. |
+| `IconButton` | Icon-only actions; `label` is required |
+| `TextField`, `SelectField` | Labelled inputs with hint/error wired to `aria-describedby` |
+| `FormMessage`, `SubmitButton` | Server-action form feedback and pending state |
+| `Card`, `CardSection` | Surfaces; `CardSection` renders a labelled `<section>` with a heading |
+| `PageHeader`, `PageBody` | Page `<h1>` + description/actions; padded body with floating-button clearance |
+| `NavTabs` | Section navigation (Settings); vertical on desktop, scrollable on mobile |
+| `Drawer` | Modal side panel on native `<dialog>` (focus trap, Escape, backdrop) |
+| `Badge`, `PlannedBadge` | Status labels; "Coming in Phase N" |
+| `EmptyState` | Empty lists and not-yet-built areas |
+| `LocalTime` | Timestamps in the viewer's time zone |
+
+Apps: built-in apps live in `src/lib/apps.ts`; activation and settings go through
+`src/server/services/apps.ts` (host-only changes, Assistant can't be deactivated). Nav items with
+an `appSlug` disappear when that app is deactivated.
 
 ## Non-negotiable security rules (from the product spec)
 

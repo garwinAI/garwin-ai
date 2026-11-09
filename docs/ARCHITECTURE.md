@@ -52,6 +52,21 @@ Prices are **not** in code; Admin will manage them (Phase 2). Always use
 `getEntitlements(user)`: team members resolve to their host's plan, and only hosts may manage
 billing or permanently delete.
 
+## Apps and the shell
+
+- **Built-in apps** are defined in `src/lib/apps.ts` (name, route, whether they can be
+  deactivated, optional settings schema). Apps included in the plan are installed by default.
+- **`app_installations`** stores only overrides per account (always the host's id): `active`
+  and `settings` (JSON validated by the app's zod schema). Only hosts can change them;
+  Assistant can never be deactivated because the spec requires it to stay reachable.
+- Deactivated apps disappear from the sidebar, show "Deactivated" on the Apps page, and their
+  routes render a notice instead of the app.
+- **Shell:** `AppShell` renders a collapsible sidebar on `lg+` (state in the `garwin_sidebar`
+  cookie so the server renders it correctly) and a top bar + `Drawer` below `lg`. The floating
+  Assistant button is rendered by the `(app)` layout on every page except `/assistant`.
+- **Assistant status** comes from `getAssistantStatus()`; until an AI provider is integrated it
+  reports unavailable and the UI disables input. It never fabricates replies.
+
 ## Errors and logging
 
 - `AppError(code, publicMessage)`: expected failures, safe to show. `statusFor(code)` maps to HTTP.

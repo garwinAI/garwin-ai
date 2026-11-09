@@ -4,7 +4,10 @@ import { env } from "@/lib/env";
 import { getMemberStats } from "@/server/services/admin-stats";
 import { PLANS, PLAN_ORDER } from "@/lib/plans";
 import { computeHealth, HEALTH_STYLES } from "@/lib/health";
-import { ComingSoon, PageHeader } from "@/components/page-header";
+import { PageBody, PageHeader } from "@/components/ui/page-header";
+import { PlannedBadge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { pingDatabase } from "@/db";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -26,7 +29,7 @@ export default async function AdminPage() {
   const config = env();
 
   const health = computeHealth({
-    online: true,
+    online: await pingDatabase(),
     critical: false,
     significantIssue: false,
     paymentsConfigured: Boolean(config.STRIPE_SECRET_KEY && config.STRIPE_WEBHOOK_SECRET),
@@ -38,11 +41,11 @@ export default async function AdminPage() {
   return (
     <>
       <PageHeader title="Admin" description="Run Garwin AI: members, plans, marketplace, support and system health." />
-      <div className="space-y-6 p-8">
+      <PageBody>
         <section className={`flex flex-wrap items-start justify-between gap-4 rounded-xl border p-5 ${style.badge}`}>
           <div>
             <p className="flex items-center gap-2 font-semibold">
-              <span className={`h-3 w-3 rounded-full ${style.dot}`} /> System health: {style.label}
+              <span className={`h-3 w-3 rounded-full ${style.dot}`} aria-hidden="true" /> System health: {style.label}
             </p>
             {health.reasons.length > 0 ? (
               <ul className="mt-2 list-inside list-disc text-sm">
@@ -60,10 +63,10 @@ export default async function AdminPage() {
             { label: "Team members", value: teamMembers },
             { label: "Approved developers", value: developers },
           ].map((s) => (
-            <div key={s.label} className="card p-5">
+            <Card key={s.label} className="p-5">
               <p className="text-sm text-neutral-500">{s.label}</p>
               <p className="mt-1 text-2xl font-semibold">{s.value}</p>
-            </div>
+            </Card>
           ))}
         </div>
 
@@ -84,12 +87,12 @@ export default async function AdminPage() {
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {UPCOMING.map((t) => (
               <li key={t.name} className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2.5 text-sm">
-                {t.name} <ComingSoon phase={t.phase} />
+                {t.name} <PlannedBadge phase={t.phase} />
               </li>
             ))}
           </ul>
         </section>
-      </div>
+      </PageBody>
     </>
   );
 }

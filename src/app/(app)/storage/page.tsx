@@ -1,39 +1,39 @@
 import type { Metadata } from "next";
 import { FolderOpen } from "lucide-react";
-import { ComingSoon, EmptyState, PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/auth/session";
 import { getEntitlements } from "@/server/services/entitlements";
+import { isAppActive } from "@/server/services/apps";
+import { PageBody, PageHeader } from "@/components/ui/page-header";
+import { PlannedBadge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { DeactivatedApp } from "@/components/deactivated-app";
 
 export const metadata: Metadata = { title: "Storage" };
 
 export default async function StoragePage() {
   const user = await requireUser();
-  const { plan } = await getEntitlements(user);
-    const usedGb = 0;
-  const pct = (usedGb / plan.storageGb) * 100;
-
+  const ent = await getEntitlements(user);
+  if (!(await isAppActive(user, "storage"))) {
+    return <DeactivatedApp name="Storage" canManage={ent.canManageApps} />;
+  }
   return (
     <>
-      <PageHeader title="Storage" description="Files shared between you and your team." actions={<ComingSoon phase={3} />} />
-      <div className="space-y-6 p-8">
-        <div className="card p-5">
-          <div className="flex items-baseline justify-between">
-            <p className="font-medium">Storage used</p>
-            <p className="text-sm text-neutral-500">
-              <span className="font-medium text-neutral-900">{usedGb} GB</span> of {plan.storageGb} GB ({plan.name})
-            </p>
-          </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-neutral-100">
-            <div className="h-full rounded-full bg-brand-600" style={{ width: `${Math.max(pct, 0.5)}%` }} />
-          </div>
-        </div>
+      <PageHeader title="Storage" description="Files shared between you and your team." actions={<PlannedBadge phase={3} />} />
+      <PageBody>
+        <Card className="flex flex-wrap items-baseline justify-between gap-2 p-5">
+          <p className="font-medium">Storage included</p>
+          <p className="text-sm text-neutral-500">
+            <span className="font-medium text-neutral-900">{ent.plan.storageGb} GB</span> on the {ent.plan.name} plan
+            {ent.isTeamMember ? ", shared with your team" : ""}
+          </p>
+        </Card>
         <EmptyState
           icon={FolderOpen}
           title="No files yet"
-          body="Upload files to keep them in your workspace. Team members can mark files for deletion; only you can delete them permanently."
-          action={<button className="btn-primary" disabled>Upload files</button>}
+          body="Uploading arrives with the core apps, along with a usage meter. Team members can mark files for deletion; only the host can delete them permanently."
         />
-      </div>
+      </PageBody>
     </>
   );
 }
