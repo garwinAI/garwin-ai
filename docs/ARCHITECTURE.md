@@ -56,16 +56,16 @@ All flows live in `src/server/services/auth.ts` (framework-independent, integrat
 
 ## Plans and entitlements
 
-`src/lib/plans.ts` holds spec limits (storage, team size, AppZone downloads, included apps).
-Prices are **not** in code; Admin will manage them (Phase 2). Always use
-`getEntitlements(user)`: team members resolve to their host's plan, and only hosts may manage
-billing or permanently delete.
+See **`docs/DATA_MODEL.md`** for the schema, relationships and every rule. In short: a user's
+plan comes from their **account's** current subscription (Free if none); team members share the
+host's plan, storage and apps; all checks go through `src/server/services/entitlements.ts`,
+which enforces limits atomically in the database.
 
 ## Apps and the shell
 
 - **Built-in apps** are defined in `src/lib/apps.ts` (name, route, whether they can be
   deactivated, optional settings schema). Apps included in the plan are installed by default.
-- **`app_installations`** stores only overrides per account (always the host's id): `active`
+- **`app_installations`** stores only overrides per account: `active`
   and `settings` (JSON validated by the app's zod schema). Only hosts can change them;
   Assistant can never be deactivated because the spec requires it to stay reachable.
 - Deactivated apps disappear from the sidebar, show "Deactivated" on the Apps page, and their

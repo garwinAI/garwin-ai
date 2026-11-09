@@ -6,6 +6,7 @@ AI-powered workspace with an AppZone marketplace for apps, widgets and themes.
 
 - Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - Spec and roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+- Data model and entitlement rules: [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md)
 - Rules for AI assistants (Copilot etc.): [`.github/copilot-instructions.md`](.github/copilot-instructions.md)
 
 ## Run it locally
@@ -73,7 +74,8 @@ src/
   components/          feature components (assistant chat + floating button, ...)
   server/services/     ALL database access (users, apps, login events, entitlements, assistant, admin stats)
   lib/                 env, logger, errors, validation, actions, plans, entitlements, health, auth/
-  db/                  Drizzle schema, client, migrate + seed scripts
+  db/schema/           Drizzle schema, one file per domain
+  db/                  client, migrate + seed scripts
   proxy.ts             route pre-check (Next 16's replacement for middleware)
   instrumentation.ts   validates env at server start
 drizzle/               SQL migrations (generated; never edit by hand)

@@ -31,7 +31,8 @@ Assistant API and system health. Full spec: `docs/ROADMAP.md`.
 | `src/server/services/` | **All database access.** One file per domain (`users.ts`, ...). Starts with `import "server-only"`. |
 | `src/lib/` | Shared logic with no DB access: `env`, `logger`, `errors`, `validation`, `actions`, `plans`, `entitlements`, `health` |
 | `src/lib/auth/` | Sessions, tokens and auth server actions |
-| `src/db/` | Drizzle schema, client, migrate and seed scripts |
+| `src/db/schema/` | Drizzle schema, one file per domain (auth, accounts, billing, apps, storage, appzone, messaging, support, audit) |
+| `src/db/` | Client, migrate and seed scripts |
 | `tests/unit/` | Vitest tests for `src/lib` logic |
 | `tests/e2e/` | Playwright user-flow tests |
 
@@ -41,8 +42,9 @@ Assistant API and system health. Full spec: `docs/ROADMAP.md`.
    to the zod schema there **and** to `.env.example` with a placeholder. Never hard-code or log secrets.
    Never put real keys, passwords or customer data in code, tests, docs or commits.
 2. **Database:** queries live in `src/server/services/*`, never in pages or components. Change the
-   schema in `src/db/schema.ts`, then run `npm run db:generate` and commit the generated migration.
-   Never edit an existing migration file.
+   schema in `src/db/schema/*.ts`, run `npm run db:generate`, review and commit the migration.
+   Never edit a migration that has been merged. Add constraints (check/unique/FK) for every rule
+   the database can enforce, and an index for every foreign key you filter by. Money is integer cents.
 3. **Validation:** validate every server action and API input with zod (`parseInput` +
    schemas from `src/lib/validation.ts`). Trust nothing from the client, including hidden fields.
 4. **Server actions:** wrap the body in `runAction(name, fn, values?)` from `src/lib/actions.ts`.
@@ -52,8 +54,12 @@ Assistant API and system health. Full spec: `docs/ROADMAP.md`.
    `requireUser()` or `requireAdmin()` from `src/lib/auth/session.ts`. `src/proxy.ts` only checks
    that a cookie exists; it is never the security boundary. Scope every query by the current
    user's id (or their host's id) inside the service, never trust ids from the client alone.
-6. **Plans:** check limits with `getEntitlements(user)` from `src/server/services/entitlements.ts`.
-   **Never read `user.plan` directly**: team members inherit their host's plan.
+6. **Plans, limits and permissions:** use ONLY `src/server/services/entitlements.ts` (see
+   `docs/DATA_MODEL.md`). Users have no plan column: the plan comes from the account's
+   subscription, and team members share the host's. Before any change, call the matching
+   `assertPermission`/`assertOwner`/`reserveStorage`/`assertSeatAvailable`/`acquireAppzoneItem`.
+   Hiding a button is never enforcement. Inside a DB transaction, pass `tx` to helpers and never
+   use the global `db` (a second connection inside a transaction can deadlock the pool).
 7. **Logging:** use `logger` from `src/lib/logger.ts` (`logger.child({ module })`). Event names are
    `noun.verb` (`checkout.created`). Log ids, not personal data. No `console.log` in app code.
 8. **Errors in UI:** route segments have `error.tsx` boundaries. Show friendly messages, never stack traces.

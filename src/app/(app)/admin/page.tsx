@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/session";
 import { env } from "@/lib/env";
 import { getMemberStats } from "@/server/services/admin-stats";
-import { PLANS, PLAN_ORDER } from "@/lib/plans";
+import { PLAN_ORDER, PLAN_SPEC } from "@/lib/plans";
 import { computeHealth, HEALTH_STYLES } from "@/lib/health";
 import { PageBody, PageHeader } from "@/components/ui/page-header";
 import { PlannedBadge } from "@/components/ui/badge";
@@ -75,7 +75,7 @@ export default async function AdminPage() {
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {PLAN_ORDER.map((id) => (
               <div key={id} className="rounded-lg bg-neutral-50 p-3">
-                <p className="text-xs text-neutral-500">{PLANS[id].name}</p>
+                <p className="text-xs text-neutral-500">{PLAN_SPEC[id].name}</p>
                 <p className="text-lg font-semibold">{planCount[id] ?? 0}</p>
               </div>
             ))}

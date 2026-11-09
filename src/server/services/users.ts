@@ -2,7 +2,7 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { users, type User } from "@/db/schema";
+import { accountMembers, accounts, users, type User } from "@/db/schema";
 
 /** A user without secrets. Never send a full User row to the client. */
 export type PublicUser = Omit<User, "passwordHash">;
@@ -23,9 +23,17 @@ export async function findUserByEmail(email: string) {
   return user ?? null;
 }
 
-export async function createUser(input: { name: string; email: string; passwordHash: string }) {
-  const [user] = await db.insert(users).values(input).returning();
-  return user;
+/**
+ * Creates a user together with their own workspace (account) and owner membership, atomically.
+ * Every user must belong to exactly one account; team invitations move them later (Phase 3).
+ */
+export async function createUser(input: { name: string; email: string; passwordHash: string; emailVerifiedAt?: Date; role?: User["role"] }) {
+  return db.transaction(async (tx) => {
+    const [user] = await tx.insert(users).values(input).returning();
+    const [account] = await tx.insert(accounts).values({ ownerUserId: user.id, name: `${user.name}'s workspace` }).returning();
+    await tx.insert(accountMembers).values({ accountId: account.id, userId: user.id, role: "owner" });
+    return user;
+  });
 }
 
 export async function updateUserName(id: string, name: string) {

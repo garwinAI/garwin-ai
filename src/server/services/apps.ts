@@ -24,7 +24,7 @@ export const listInstalledApps = cache(async (user: SessionUser): Promise<Instal
   const ent = await getEntitlements(user);
   const rows = await db.select().from(appInstallations).where(eq(appInstallations.accountId, ent.accountId));
   const bySlug = new Map(rows.map((r) => [r.appSlug, r]));
-  return BUILT_IN_APPS.filter((app) => appIncludedInPlan(app, ent.plan.id)).map((app) => {
+  return BUILT_IN_APPS.filter((app) => appIncludedInPlan(app, ent.plan.includedApps)).map((app) => {
     const row = bySlug.get(app.slug);
     return {
       app,
@@ -51,7 +51,7 @@ async function assertManageable(user: SessionUser, slug: string) {
   if (!app) throw new AppError("NOT_FOUND", "That app doesn't exist.");
   const ent = await getEntitlements(user);
   if (!ent.canManageApps) throw new AppError("FORBIDDEN", "Only the account host can change apps.");
-  if (!appIncludedInPlan(app, ent.plan.id)) throw new AppError("PLAN_LIMIT", `${app.name} isn't included in your plan.`);
+  if (!appIncludedInPlan(app, ent.plan.includedApps)) throw new AppError("PLAN_LIMIT", `${app.name} isn't included in your plan.`);
   return { app, accountId: ent.accountId };
 }
 

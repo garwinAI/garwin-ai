@@ -19,9 +19,9 @@ export default async function AppZonePage() {
   const user = await requireUser();
   const { plan } = await getEntitlements(user);
   const allowance =
-    plan.appZoneDownloads === null
+    plan.freeAppzoneDownloadLimit === null
       ? `Unlimited eligible downloads on ${plan.name}`
-      : `${plan.appZoneDownloads} free downloads on ${plan.name}`;
+      : `${plan.freeAppzoneDownloadLimit} free downloads on ${plan.name} (lifetime)`;
 
   return (
     <>

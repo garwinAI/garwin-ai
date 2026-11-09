@@ -38,6 +38,7 @@
 | 1a | Foundation: env, logging, errors, validation, services, tests, CI, docs, AI instructions | ✅ Done |
 | 1b | Responsive shell, accessible UI components, real app activation + app settings, no faked data | ✅ Done |
 | 1.5 | Auth: DB sessions, password reset, email verification (Resend), rate limiting, CSRF checks, device management, activity history | ✅ Done |
+| 1.5b | Data model: accounts/teams/permissions/invitations, plans/prices/subscriptions/payments, storage, AppZone, messaging, support, audit; central entitlement service | ✅ Done |
 | 1.6 | Deploy to dev.garwinai.com (Vercel + Neon + Resend), CSP header, data retention jobs | Next |
 | 2 | Billing: Admin-set prices, Stripe Checkout (monthly/yearly), customer portal, signed idempotent webhooks | |
 | 3 | Core apps: Storage (R2, shared quota, permissions, mark-for-deletion), Calendar, Contacts, Messages, notifications, teams | |
@@ -50,5 +51,6 @@
 
 - Hosting: Vercel + Neon (Postgres) + Cloudflare R2 proposed; not yet confirmed. Email: **Resend (confirmed)**.
 - Separate domain for sandboxed AppZone items (e.g. `garwinapps.com`).
-- Free users buying paid AppZone items; meaning of "eligible" downloads on paid plans.
+- Free download limit: **lifetime** (confirmed). Eligible = free-priced items (confirmed). Free accounts may buy paid items (assumed).
+- What happens when someone who already has a workspace accepts a team invitation (Phase 3).
 - Whether Wordbase/Codebase/Spreadsheets are full apps in v1.
