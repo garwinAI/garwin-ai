@@ -65,8 +65,10 @@ src/
     (app)/             signed-in workspace (sidebar layout): assistant, messages, calendar,
                        apps, appzone, contacts, storage, settings/*, admin
     api/health/        public health check
-  components/          UI: shell (sidebar), assistant (chat + floating button), shared pieces
-  server/services/     ALL database access (users, login events, entitlements, admin stats)
+  components/ui/       accessible building blocks (Button, TextField, CardSection, Drawer, NavTabs...)
+  components/shell/    responsive sidebar + mobile drawer, navigation config
+  components/          feature components (assistant chat + floating button, ...)
+  server/services/     ALL database access (users, apps, login events, entitlements, assistant, admin stats)
   lib/                 env, logger, errors, validation, actions, plans, entitlements, health, auth/
   db/                  Drizzle schema, client, migrate + seed scripts
   proxy.ts             route pre-check (Next 16's replacement for middleware)

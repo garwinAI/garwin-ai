@@ -16,7 +16,7 @@ test("navigation follows the spec order", async ({ page }) => {
   ]);
 });
 
-test("floating Assistant opens from other pages and is hidden on the Assistant page", async ({ page }) => {
+test("floating Assistant opens from other pages, is honest about its state, and is hidden on the Assistant page", async ({ page }) => {
   await signUp(page);
   await expect(page.getByRole("button", { name: "Open Assistant" })).toHaveCount(0);
 
@@ -24,11 +24,13 @@ test("floating Assistant opens from other pages and is hidden on the Assistant p
   await page.getByRole("button", { name: "Open Assistant" }).click();
   const panel = page.getByRole("dialog", { name: "Assistant" });
   await expect(panel).toBeVisible();
-  await panel.getByLabel("Message the Assistant").fill("Hello");
-  await panel.getByRole("button", { name: "Send" }).click();
-  await expect(panel.getByText("not connected to an AI model")).toBeVisible();
+  await expect(panel).toBeFocused();
+  // No fake replies: input is disabled and the reason is shown.
+  await expect(panel.getByLabel("Message the Assistant", { exact: true })).toBeDisabled();
+  await expect(panel.getByRole("status")).toContainText("isn't connected");
   await page.keyboard.press("Escape");
   await expect(panel).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Open Assistant" })).toBeFocused();
 });
 
 test("sidebar collapse persists across reloads", async ({ page }) => {
@@ -48,10 +50,10 @@ test("Free plan: locked premium apps, 10 AppZone downloads, 1 GB storage", async
   await expect(page).toHaveURL(/\/calendar$/);
 
   await page.goto("/appzone");
-  await expect(page.getByText("0 of 10")).toBeVisible();
+  await expect(page.getByText("10 free downloads on Free")).toBeVisible();
 
   await page.goto("/storage");
-  await expect(page.getByText("of 1 GB")).toBeVisible();
+  await expect(page.getByText("1 GB")).toBeVisible();
 });
 
 test("members cannot open Admin", async ({ page }) => {

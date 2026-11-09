@@ -24,25 +24,31 @@ describe("plan limits match the product spec", () => {
 
 describe("resolveEntitlements", () => {
   it("hosts use their own plan and can manage billing and delete", () => {
-    const e = resolveEntitlements({ plan: "plus", hostId: null });
+    const e = resolveEntitlements({ id: "u-1", plan: "plus", hostId: null });
     expect(e.plan.id).toBe("plus");
     expect(e.canManageBilling).toBe(true);
     expect(e.canPermanentlyDelete).toBe(true);
   });
 
   it("team members inherit the host plan, not their own", () => {
-    const e = resolveEntitlements({ plan: "free", hostId: "host-1" }, "pro");
+    const e = resolveEntitlements({ id: "u-1", plan: "free", hostId: "host-1" }, "pro");
     expect(e.plan.id).toBe("pro");
     expect(e.isTeamMember).toBe(true);
   });
 
   it("team members cannot permanently delete or manage billing", () => {
-    const e = resolveEntitlements({ plan: "free", hostId: "host-1" }, "pro");
+    const e = resolveEntitlements({ id: "u-1", plan: "free", hostId: "host-1" }, "pro");
     expect(e.canPermanentlyDelete).toBe(false);
     expect(e.canManageBilling).toBe(false);
+    expect(e.canManageApps).toBe(false);
+  });
+
+  it("team members share the host's account", () => {
+    expect(resolveEntitlements({ id: "u-1", plan: "free", hostId: "host-1" }, "pro").accountId).toBe("host-1");
+    expect(resolveEntitlements({ id: "u-1", plan: "free", hostId: null }).accountId).toBe("u-1");
   });
 
   it("refuses to guess a team member's plan without the host plan", () => {
-    expect(() => resolveEntitlements({ plan: "free", hostId: "host-1" })).toThrow();
+    expect(() => resolveEntitlements({ id: "u-1", plan: "free", hostId: "host-1" })).toThrow();
   });
 });

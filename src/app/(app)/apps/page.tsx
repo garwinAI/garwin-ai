@@ -1,48 +1,60 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Lock, Store } from "lucide-react";
-import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/auth/session";
 import { getEntitlements } from "@/server/services/entitlements";
-import { BUILT_IN_APPS, appIncludedInPlan } from "@/lib/apps";
+import { listInstalledApps } from "@/server/services/apps";
+import { BUILT_IN_APPS } from "@/lib/apps";
+import { PageBody, PageHeader } from "@/components/ui/page-header";
+import { ButtonLink } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/components/ui/cn";
 
 export const metadata: Metadata = { title: "Apps" };
 
 export default async function AppsPage() {
   const user = await requireUser();
-  const { plan } = await getEntitlements(user);
+  const [{ plan }, installed] = await Promise.all([getEntitlements(user), listInstalledApps(user)]);
+  const bySlug = new Map(installed.map((i) => [i.app.slug, i]));
+
   return (
     <>
       <PageHeader
         title="Apps"
         description="Apps included with your plan, plus anything you add from AppZone."
         actions={
-          <Link href="/appzone" className="btn-primary">
-            <Store className="h-4 w-4" /> Go to AppZone
-          </Link>
+          <ButtonLink href="/appzone">
+            <Store className="h-4 w-4" aria-hidden="true" /> Go to AppZone
+          </ButtonLink>
         }
       />
-      <div className="grid gap-4 p-8 sm:grid-cols-2 xl:grid-cols-4">
-        {BUILT_IN_APPS.map((app) => {
-          const included = appIncludedInPlan(app, plan.id);
-          return (
-            <Link key={app.slug} href={`/apps/${app.slug}`} className="card group overflow-hidden transition-shadow hover:shadow-md">
-              <div className={`h-24 bg-gradient-to-br ${app.color} ${included ? "" : "opacity-50 grayscale"}`} />
-              <div className="p-4">
-                <p className="flex items-center justify-between font-medium">
-                  {app.name}
-                  {!included && (
-                    <span className="flex items-center gap-1 text-xs font-medium text-accent-600">
-                      <Lock className="h-3 w-3" /> Starter+
-                    </span>
-                  )}
-                </p>
-                <p className="mt-0.5 text-sm text-neutral-500">{app.tagline}</p>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+      <PageBody>
+        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Apps">
+          {BUILT_IN_APPS.map((app) => {
+            const inst = bySlug.get(app.slug);
+            const status = !inst ? "locked" : !inst.active ? "deactivated" : app.href ? "ready" : "unbuilt";
+            return (
+              <li key={app.slug}>
+                <Link href={`/apps/${app.slug}`} className="card group block h-full overflow-hidden transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-brand-600">
+                  <div className={cn("h-24 bg-gradient-to-br", app.color, status !== "ready" && "opacity-50 grayscale")} aria-hidden="true" />
+                  <div className="p-4">
+                    <p className="flex items-center justify-between gap-2 font-medium">
+                      {app.name}
+                      {status === "locked" && (
+                        <Badge tone="accent"><Lock className="h-3 w-3" aria-hidden="true" /> Starter+</Badge>
+                      )}
+                      {status === "deactivated" && <Badge>Deactivated</Badge>}
+                      {status === "unbuilt" && <Badge>Coming soon</Badge>}
+                    </p>
+                    <p className="mt-0.5 text-sm text-neutral-500">{app.tagline}</p>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="text-sm text-neutral-500">You&apos;re on the {plan.name} plan.</p>
+      </PageBody>
     </>
   );
 }

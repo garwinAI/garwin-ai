@@ -7,6 +7,8 @@ import {
   integer,
   boolean,
   index,
+  jsonb,
+  uniqueIndex,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
@@ -51,5 +53,26 @@ export const loginEvents = pgTable(
   ],
 );
 
+// Per-account app state. Built-in apps included in the plan are installed by default,
+// so a row only exists once the host deactivates an app or changes its settings.
+// `accountId` is always the HOST account: the team shares the host's apps.
+export const appInstallations = pgTable(
+  "app_installations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    appSlug: text("app_slug").notNull(),
+    active: boolean("active").notNull().default(true),
+    settings: jsonb("settings").$type<Record<string, unknown>>().notNull().default({}),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("app_installations_account_app_idx").on(t.accountId, t.appSlug)],
+);
+
 export type User = typeof users.$inferSelect;
+export type AppInstallation = typeof appInstallations.$inferSelect;
 export type LoginEvent = typeof loginEvents.$inferSelect;

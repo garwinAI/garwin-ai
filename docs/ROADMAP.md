@@ -36,6 +36,7 @@
 | --- | --- | --- |
 | 1 | Shell, design, navigation, floating Assistant UI, auth, roles, IP history, Admin health | ✅ Done |
 | 1a | Foundation: env, logging, errors, validation, services, tests, CI, docs, AI instructions | ✅ Done |
+| 1b | Responsive shell, accessible UI components, real app activation + app settings, no faked data | ✅ Done |
 | 1.5 | Hardening: password reset + email verification, lockout redesign, CSP, signup rate limit, deploy to dev.garwinai.com | Next |
 | 2 | Billing: Admin-set prices, Stripe Checkout (monthly/yearly), customer portal, signed idempotent webhooks | |
 | 3 | Core apps: Storage (R2, shared quota, permissions, mark-for-deletion), Calendar, Contacts, Messages, notifications, teams | |
