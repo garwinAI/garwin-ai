@@ -1,0 +1,17 @@
+# Optional local Postgres for development: `docker compose up -d`
+# Matches the DATABASE_URL example in .env.example. Local use only.
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: garwin
+    ports:
+      - "5432:5432"
+    volumes:
+      - garwin-pg:/var/lib/postgresql/data
+
+volumes:
+  garwin-pg:

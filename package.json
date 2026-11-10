@@ -8,15 +8,20 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "check": "npm run lint && npm run typecheck && npm run test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx src/db/seed.ts",
+    "test:integration": "vitest run --config vitest.integration.config.mts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.7.0",
     "bcryptjs": "^3.0.2",
     "drizzle-orm": "^0.45.4",
-    "jose": "^6.0.0",
     "lucide-react": "^0.500.0",
     "next": "16.4.5",
     "pg": "^8.13.0",
@@ -26,8 +31,10 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.65.0",
     "@tailwindcss/postcss": "4.3.5",
-    "@types/node": "^20",
+    "@types/node": "^22.20.5",
     "@types/pg": "^8.11.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -37,6 +44,10 @@
     "eslint-config-next": "16.4.5",
     "tailwindcss": "4.3.5",
     "tsx": "^4.19.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=20.9"
   }
 }
