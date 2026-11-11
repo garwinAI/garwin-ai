@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+// Login lockout counts failures per IP. Give each run its own address so repeated local runs
+// (each makes one deliberate wrong-password attempt) can't lock the test machine out.
+const octet = () => Math.floor(Math.random() * 250) + 1;
+test.use({ extraHTTPHeaders: { "x-forwarded-for": `10.${octet()}.${octet()}.${octet()}` } });
+
 const unique = () => `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
 
 test("health check is public and reports the database", async ({ request }) => {
@@ -12,9 +17,11 @@ test("health check is public and reports the database", async ({ request }) => {
 test("landing page has no accessibility violations", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Your AI-powered workspace" })).toBeVisible();
-  await page.waitForLoadState("networkidle");
-  const { violations } = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
-  expect(violations.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.target.join(" ")}`))).toEqual([]);
+  // Retries because the dev server may reload the page once while it compiles.
+  await expect(async () => {
+    const { violations } = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+    expect(violations.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.target.join(" ")}`))).toEqual([]);
+  }).toPass({ timeout: 20_000 });
 });
 
 test("signed-out visitors are sent to log in", async ({ page }) => {

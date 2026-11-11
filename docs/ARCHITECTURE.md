@@ -7,11 +7,12 @@ Drizzle ORM, deployed on Vercel.
 
 1. **`src/proxy.ts`** (Next 16's replacement for middleware) does a fast, optimistic check of the
    signed session cookie. Signed-out visitors go to `/login`; non-admins are kept out of `/admin`.
-   `/`, `/api/health` and static files are public.
+   `/`, `/api/health`, `/api/stripe/webhook` and static files are public.
 2. **Pages and server actions** do the real authorization with `requireUser()` /
    `requireAdmin()` from `src/lib/auth/session.ts`, which also checks the session against the
    database.
-3. **Database access** goes through `db` from `src/db/index.ts` (one shared `pg` pool).
+3. **Database access** goes through `db` from `src/db/index.ts` (one shared `pg` pool). Feature
+   services with external calls live in `src/server/` (currently `src/server/billing/`).
 
 ## Authentication
 
@@ -33,6 +34,24 @@ Drizzle ORM, deployed on Vercel.
   with a list of every invalid variable.
 - `.env.example` lists every variable with placeholder values. Real `.env` files are never
   committed.
+
+## Billing (Stripe)
+
+- Keys stay in environment variables (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`), never in the
+  database. Without them, billing pages explain that payments aren't switched on yet.
+- `src/server/billing/service.ts` does all Stripe and billing database work; pages and actions
+  call it. `src/lib/billing.ts` holds the pure rules (price parsing, which statuses keep a plan).
+- **Prices:** Admin enters them in Admin → Billing. Saving creates the Stripe product/price (with
+  `metadata.plan` and `metadata.interval`) and archives the previous price.
+- **Subscribing:** Stripe Checkout (hosted by Stripe, so card numbers never touch our servers).
+  The success page reads the session back from Stripe so the plan updates immediately.
+- **Switching plans:** done in-app with `subscriptions.update` and immediate proration.
+- **Cards, invoices, cancelling:** Stripe's hosted billing portal.
+- **Webhook** (`/api/stripe/webhook`): verifies Stripe's signature, skips events already handled,
+  then re-reads the subscription from Stripe and syncs it. Re-reading means late or out-of-order
+  events can't roll a user back, and an old canceled subscription can't override a newer one.
+- **Tests** use `tests/support/fake-stripe.mjs`, an in-memory imitation of the Stripe API plus fake
+  Checkout and portal pages that send correctly signed webhooks.
 
 ## Apps and the shell
 

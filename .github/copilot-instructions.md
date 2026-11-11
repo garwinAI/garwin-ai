@@ -15,6 +15,8 @@ or package manager.
 - `src/components/` shared UI; `src/components/shell/` sidebar and navigation.
 - `src/lib/` pure logic and helpers (plans, apps, health, env, auth). Anything without database
   access belongs here and gets unit tests.
+- `src/server/<feature>/` server-only services that combine the database with outside services
+  (e.g. `src/server/billing/` for Stripe), plus that feature's server actions.
 - `src/db/schema.ts` the only place tables are defined. After changing it run
   `npm run db:generate` and commit the new file in `drizzle/`. Never hand-edit `drizzle/`.
 - Tests: `tests/unit` (no database), `tests/integration` (database), `tests/e2e` (browser).
@@ -44,6 +46,9 @@ or package manager.
 - AppZone app code only ever runs on `APPZONE_SANDBOX_ORIGIN` inside an iframe, never on this
   app's origin.
 - Changing a password or "log out everywhere" must bump `session_version`.
+- Stripe: never trust plan or price data from the browser or from an unverified webhook. Verify
+  webhook signatures, and re-read subscriptions from Stripe before changing a user's plan.
+  Card details are only ever entered on Stripe's own pages.
 
 ## Accessibility
 

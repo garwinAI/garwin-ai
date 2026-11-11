@@ -29,12 +29,26 @@ const schema = z
     APPZONE_SANDBOX_ORIGIN: optional,
     STRIPE_SECRET_KEY: optional,
     STRIPE_WEBHOOK_SECRET: optional,
+    // Tests only: send Stripe API calls to the fake server in tests/support. Refused in production.
+    STRIPE_API_BASE: optional,
     ASSISTANT_API_KEY: optional,
   })
   .superRefine((env, ctx) => {
     const twilio = [env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN, env.TWILIO_FROM].filter(Boolean).length;
     if (twilio !== 0 && twilio !== 3) {
       ctx.addIssue({ code: "custom", path: ["TWILIO_ACCOUNT_SID"], message: "set all three TWILIO_* variables or none" });
+    }
+    if (Boolean(env.STRIPE_SECRET_KEY) !== Boolean(env.STRIPE_WEBHOOK_SECRET)) {
+      ctx.addIssue({ code: "custom", path: ["STRIPE_SECRET_KEY"], message: "set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET together" });
+    }
+    if (env.STRIPE_SECRET_KEY && !/^(sk|rk)_(test|live)_/.test(env.STRIPE_SECRET_KEY)) {
+      ctx.addIssue({ code: "custom", path: ["STRIPE_SECRET_KEY"], message: "must start with sk_test_, sk_live_, rk_test_ or rk_live_" });
+    }
+    if (env.STRIPE_WEBHOOK_SECRET && !env.STRIPE_WEBHOOK_SECRET.startsWith("whsec_")) {
+      ctx.addIssue({ code: "custom", path: ["STRIPE_WEBHOOK_SECRET"], message: "must start with whsec_" });
+    }
+    if (env.STRIPE_API_BASE && env.NODE_ENV === "production" && !/^http:\/\/localhost:/.test(env.STRIPE_API_BASE)) {
+      ctx.addIssue({ code: "custom", path: ["STRIPE_API_BASE"], message: "is for tests only; remove it" });
     }
     if (
       env.APPZONE_SANDBOX_ORIGIN &&

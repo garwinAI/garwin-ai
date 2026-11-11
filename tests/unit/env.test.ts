@@ -39,4 +39,17 @@ describe("validateEnv", () => {
       validateEnv({ ...base, APP_URL: "https://dev.garwinai.com", APPZONE_SANDBOX_ORIGIN: "https://garwinai.com" }),
     ).toThrow(/APPZONE_SANDBOX_ORIGIN/);
   });
+
+  it("checks the Stripe keys", () => {
+    expect(() => validateEnv({ ...base, STRIPE_SECRET_KEY: "sk_test_abc" })).toThrow(/together/);
+    expect(() => validateEnv({ ...base, STRIPE_SECRET_KEY: "pk_test_abc", STRIPE_WEBHOOK_SECRET: "whsec_x" })).toThrow(/sk_test_/);
+    expect(() => validateEnv({ ...base, STRIPE_SECRET_KEY: "sk_test_abc", STRIPE_WEBHOOK_SECRET: "nope" })).toThrow(/whsec_/);
+    expect(validateEnv({ ...base, STRIPE_SECRET_KEY: "sk_test_abc", STRIPE_WEBHOOK_SECRET: "whsec_x" }).STRIPE_SECRET_KEY).toBe("sk_test_abc");
+  });
+
+  it("refuses the test-only Stripe server setting in production", () => {
+    const prod = { ...base, NODE_ENV: "production" };
+    expect(() => validateEnv({ ...prod, STRIPE_API_BASE: "https://evil.example" })).toThrow(/STRIPE_API_BASE/);
+    expect(validateEnv({ ...prod, STRIPE_API_BASE: "http://localhost:3199" }).STRIPE_API_BASE).toBe("http://localhost:3199");
+  });
 });

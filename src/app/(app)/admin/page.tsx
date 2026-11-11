@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { count, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -9,10 +10,10 @@ import { ComingSoon, PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Admin" };
 
-const UPCOMING = [
+const UPCOMING: { name: string; phase?: number; href?: string }[] = [
   { name: "Members", phase: 6 },
-  { name: "Plans & prices", phase: 2 },
-  { name: "Stripe settings", phase: 2 },
+  { name: "Plans & prices", href: "/admin/billing" },
+  { name: "Stripe settings", href: "/admin/billing" },
   { name: "Apps & marketplace", phase: 5 },
   { name: "Developer applications", phase: 5 },
   { name: "Support tickets", phase: 6 },
@@ -88,7 +89,11 @@ export default async function AdminPage() {
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {UPCOMING.map((t) => (
               <li key={t.name} className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2.5 text-sm">
-                {t.name} <ComingSoon phase={t.phase} />
+                {t.href ? (
+                  <Link href={t.href} className="font-medium text-brand-700 hover:underline">{t.name}</Link>
+                ) : (
+                  <>{t.name} <ComingSoon phase={t.phase!} /></>
+                )}
               </li>
             ))}
           </ul>

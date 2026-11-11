@@ -6,6 +6,8 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = Number(process.env.E2E_PORT ?? 3100);
 const MOCK_RESEND_PORT = 3199;
 const isCI = Boolean(process.env.CI);
+// The fake Stripe server (tests/support/fake-stripe.mjs) signs webhooks with this; not a real secret.
+const FAKE_STRIPE_WEBHOOK_SECRET = "whsec_test_e2e_not_a_real_secret";
 
 // Emails go to a local fake Resend server; tests read links from this file.
 export const MAIL_FILE = process.env.MOCK_MAIL_FILE ?? join(tmpdir(), "garwin-e2e-mail.jsonl");
@@ -36,7 +38,12 @@ export default defineConfig({
     {
       command: "node tests/support/mock-providers.mjs",
       url: `http://localhost:${MOCK_RESEND_PORT}/health`,
-      env: { MOCK_MAIL_FILE: MAIL_FILE, MOCK_RESEND_PORT: String(MOCK_RESEND_PORT) },
+      env: {
+        MOCK_MAIL_FILE: MAIL_FILE,
+        MOCK_RESEND_PORT: String(MOCK_RESEND_PORT),
+        STRIPE_WEBHOOK_URL: `http://localhost:${PORT}/api/stripe/webhook`,
+        STRIPE_WEBHOOK_SECRET: FAKE_STRIPE_WEBHOOK_SECRET,
+      },
       reuseExistingServer: false,
     },
     {
@@ -55,6 +62,9 @@ export default defineConfig({
         TWILIO_FROM: "+15005550006",
         TWILIO_API_BASE: `http://localhost:${MOCK_RESEND_PORT}`,
         MAIL_LOG_FILE: "",
+        STRIPE_SECRET_KEY: "sk_test_e2e_not_a_real_key",
+        STRIPE_WEBHOOK_SECRET: FAKE_STRIPE_WEBHOOK_SECRET,
+        STRIPE_API_BASE: `http://localhost:${MOCK_RESEND_PORT}`,
       },
     },
   ],
