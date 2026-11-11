@@ -30,7 +30,7 @@ export default async function AppsPage() {
                 <p className="flex items-center justify-between font-medium">
                   {app.name}
                   {!included && (
-                    <span className="flex items-center gap-1 text-xs font-medium text-accent-600">
+                    <span className="flex items-center gap-1 text-xs font-medium text-accent-700">
                       <Lock className="h-3 w-3" /> Starter+
                     </span>
                   )}

@@ -26,7 +26,7 @@ export default async function AppDetailPage({ params }: Props) {
       </Link>
       <div className="card grid overflow-hidden lg:grid-cols-2">
         <div className="flex flex-col justify-center p-8 lg:p-12">
-          <p className="text-xs font-medium uppercase tracking-wider text-accent-600">Garwin AI app</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-accent-700">Garwin AI app</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">{app.name}</h1>
           <p className="mt-2 text-lg text-neutral-600">{app.tagline}</p>
           <p className="mt-4 text-sm leading-relaxed text-neutral-500">{app.description}</p>
@@ -34,7 +34,7 @@ export default async function AppDetailPage({ params }: Props) {
             {included ? (
               <><Check className="h-4 w-4 text-green-600" /> Included in your plan</>
             ) : (
-              <><Lock className="h-4 w-4 text-accent-600" /> Available on Starter, Plus and Pro</>
+              <><Lock className="h-4 w-4 text-accent-700" /> Available on Starter, Plus and Pro</>
             )}
           </p>
           <div className="mt-8">

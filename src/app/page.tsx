@@ -27,7 +27,7 @@ export default async function Home() {
       </header>
 
       <section className="mx-auto max-w-3xl px-6 pb-16 pt-20 text-center">
-        <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent-100 bg-accent-50 px-3 py-1 text-xs font-medium text-accent-600">
+        <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent-100 bg-accent-50 px-3 py-1 text-xs font-medium text-accent-700">
           <span className="h-1.5 w-1.5 rounded-full bg-accent-500" /> Now in development
         </p>
         <h1 className="text-4xl font-semibold tracking-tight text-neutral-900 sm:text-5xl">

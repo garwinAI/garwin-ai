@@ -21,7 +21,7 @@ export function Logo({ collapsed = false }: { collapsed?: boolean }) {
       <LogoMark />
       {!collapsed && (
         <span className="text-[15px] font-semibold tracking-tight text-neutral-900">
-          Garwin <span className="text-accent-500">AI</span>
+          Garwin <span className="text-accent-700">AI</span>
         </span>
       )}
     </span>

@@ -23,6 +23,6 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Everything except Next internals, static files and the public landing page.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$|$).*)"],
+  // Everything except Next internals, static files, the health check and the public landing page.
+  matcher: ["/((?!_next/static|_next/image|api/health|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$|$).*)"],
 };

@@ -43,7 +43,7 @@ export function EmptyState({
 
 export function ComingSoon({ phase }: { phase: number }) {
   return (
-    <span className="rounded-full bg-accent-50 px-2 py-0.5 text-xs font-medium text-accent-600">
+    <span className="rounded-full bg-accent-50 px-2 py-0.5 text-xs font-medium text-accent-700">
       Coming in Phase {phase}
     </span>
   );

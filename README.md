@@ -34,8 +34,6 @@ npm run dev
 ```
 
 Open http://localhost:3000, then sign up, or log in with your `ADMIN_EMAIL`.
-Without `RESEND_API_KEY`, verification and password-reset emails are printed in the terminal
-running `npm run dev`; copy the link from there.
 Check it's healthy at http://localhost:3000/api/health.
 
 If anything in `.env` is missing or invalid, the server stops at startup and lists exactly which variable is wrong.
@@ -59,6 +57,8 @@ If anything in `.env` is missing or invalid, the server stops at startup and lis
 | `npm run db:studio` | Browse the database in Drizzle Studio |
 
 First time running e2e tests: `npx playwright install chromium`.
+`npm run test:integration` and `npm run test:e2e` add test users to the database in `DATABASE_URL`,
+so point it at a local or throwaway database, never production.
 
 ## Project layout
 
@@ -69,20 +69,21 @@ src/
     (app)/             signed-in workspace (sidebar layout): assistant, messages, calendar,
                        apps, appzone, contacts, storage, settings/*, admin
     api/health/        public health check
-  components/ui/       accessible building blocks (Button, TextField, CardSection, Drawer, NavTabs...)
-  components/shell/    responsive sidebar + mobile drawer, navigation config
-  components/          feature components (assistant chat + floating button, ...)
-  server/services/     ALL database access (users, apps, login events, entitlements, assistant, admin stats)
-  lib/                 env, logger, errors, validation, actions, plans, entitlements, health, auth/
-  db/schema/           Drizzle schema, one file per domain
+  components/          shared UI (form, page header, logo, local time)
+  components/shell/    responsive sidebar, navigation config
+  components/assistant/ assistant chat + floating button
+  lib/                 env, plans, apps, health, appzone-sandbox, auth/ (session, token, actions)
+  db/schema.ts         Drizzle schema (all tables)
   db/                  client, migrate + seed scripts
   proxy.ts             route pre-check (Next 16's replacement for middleware)
   instrumentation.ts   validates env at server start
 drizzle/               SQL migrations (generated; never edit by hand)
-tests/unit/            Vitest
-tests/e2e/             Playwright
-docs/                  architecture, roadmap
-.github/               CI workflow, PR template, Copilot instructions
+tests/unit/            Vitest, no database
+tests/integration/     Vitest against DATABASE_URL
+tests/e2e/             Playwright + axe accessibility checks
+tests/support/         test helpers (fake email/SMS server)
+docs/                  architecture, data model, roadmap
+.github/               CI workflow, PR template, AI assistant instructions
 ```
 
 ## Configuration and secrets
@@ -106,8 +107,8 @@ docs/                  architecture, roadmap
 
 ## Set up email (Resend)
 
-Password reset and email verification need a real email provider in production; the app won't
-start without one.
+Password reset and email verification are planned but not built yet (see `docs/ROADMAP.md`).
+Set this up when that work starts.
 
 1. Create an account at [resend.com](https://resend.com) → **Domains → Add domain** → `garwinai.com`.
 2. Resend shows several DNS records (SPF/DKIM, usually TXT and MX). Add each one in Namecheap →
@@ -118,7 +119,7 @@ start without one.
 
 ## Set up SMS invitations (Twilio)
 
-Optional. Without it, hosts can still invite by email.
+Optional, and not built yet (see `docs/ROADMAP.md`). Without it, hosts will still be able to invite by email.
 
 1. Create an account at [twilio.com](https://www.twilio.com) and buy a phone number with SMS.
 2. For US recipients, complete **A2P 10DLC** registration (Messaging → Regulatory Compliance);

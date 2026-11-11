@@ -61,7 +61,7 @@ export function Sidebar({ initialCollapsed, user }: Props) {
           <div className="mb-1 px-2 py-1.5">
             <p className="truncate text-sm font-medium text-neutral-900">{user.name}</p>
             <p className="truncate text-xs text-neutral-500">
-              {user.email} · <span className="font-medium capitalize text-accent-600">{user.plan}</span>
+              {user.email} · <span className="font-medium capitalize text-accent-700">{user.plan}</span>
             </p>
           </div>
         )}
