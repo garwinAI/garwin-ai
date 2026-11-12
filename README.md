@@ -26,11 +26,18 @@ AI-powered workspace with an AppZone marketplace for apps, widgets and themes.
 
 ## Deploy to dev.garwinai.com (Vercel)
 
-1. On vercel.com: **Add New → Project → import `garwinAI/garwin-ai`**. Set the production branch to the one you want live (e.g. `dev`).
+1. On vercel.com: **Add New → Project → import `garwinAI/garwin-ai`**. Set the production branch to `main`.
 2. Add environment variables: `DATABASE_URL`, `AUTH_SECRET` (32+ random characters, a new value, not your local one).
 3. Run `npm run db:migrate` and `npm run db:seed` once against that database (from your computer with `.env` pointing at it).
 4. In Vercel → Project → **Settings → Domains**, add `dev.garwinai.com`. Copy the CNAME target it shows.
 5. In Namecheap → Domain List → garwinai.com → **Advanced DNS**, add **CNAME** · Host `dev` · Value = Vercel's target.
+
+## Branches
+
+- `main` is the live site. Only tested changes go here.
+- `dev` is work in progress. Vercel builds a private preview link for every push to it.
+
+To publish: merge `dev` into `main`.
 
 ## Scripts
 
