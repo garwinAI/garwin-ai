@@ -103,7 +103,8 @@ To publish: merge `dev` into `live`. This repo is the only copy of the app.
 1. vercel.com → **Add New → Project** → import `garwinAI/garwin-ai`, production branch `live`.
 2. Add environment variables: `DATABASE_URL` (the **pooled** connection string), `AUTH_SECRET` (a new
    value, not your local one), `APP_URL=https://dev.garwinai.com`, `RESEND_API_KEY`, `EMAIL_FROM`.
-3. Run `npm run db:migrate` and `npm run db:seed` once against that database.
+3. Also add `ADMIN_EMAIL` and `ADMIN_PASSWORD` (12+ characters). Every production deploy applies database
+   migrations and creates the Admin account automatically (`scripts/vercel-build.mjs`); preview deploys never touch the database.
 4. Vercel → Settings → **Domains** → add `dev.garwinai.com`, and copy the CNAME target.
 5. Namecheap → Domain List → garwinai.com → **Advanced DNS** → add **CNAME**, Host `dev`, Value = Vercel's target.
 6. Check `https://dev.garwinai.com/api/health` returns `"status":"ok"`.
