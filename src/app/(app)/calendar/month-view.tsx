@@ -60,7 +60,7 @@ export function MonthView({ weekStartsOn = "sunday" }: { weekStartsOn?: "sunday"
                       aria-current={isToday(d) ? "date" : undefined}
                       className={cn(
                         "inline-flex h-7 w-7 items-center justify-center rounded-full",
-                        isToday(d) ? "bg-accent-500 font-semibold text-white" : "text-neutral-700",
+                        isToday(d) ? "bg-accent-700 font-semibold text-white" : "text-neutral-700",
                       )}
                     >
                       {d}

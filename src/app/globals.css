@@ -15,7 +15,7 @@
   --color-accent-100: #ffedd5;
   --color-accent-500: #f97316;
   --color-accent-600: #ea580c;
-  /* Use accent-700 for orange TEXT: 4.5:1+ on white and accent-50. 500/600 are for fills, icons, dots. */
+  /* Use accent-700 for orange TEXT: 4.5:1+ on white and accent-50. 500/600 are for fills, icons, dots. White text needs an accent-700 fill. */
   --color-accent-700: #c2410c;
 
   /* Slightly darker than Tailwind's default so secondary text passes WCAG AA on the gray page background. */
