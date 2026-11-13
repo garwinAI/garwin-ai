@@ -63,7 +63,7 @@ test("Admin sees system health", async ({ page }) => {
   await logIn(page, email!, password!);
   await expect(page).toHaveURL(/\/assistant$/);
   await page.goto("/admin");
-  await expect(page.getByText(/System health:/)).toBeVisible();
+  await expect(page.getByRole("region", { name: "System health" })).toBeVisible();
 });
 
 test("Admin publishes dev to live with Update App, then the button is greyed out", async ({ page, request }) => {
@@ -103,7 +103,7 @@ test("Admin Assistant edits a file on dev, and can't touch protected code", asyn
   await expect(page).toHaveURL(/\/assistant$/);
 
   await page.goto("/admin");
-  await page.getByRole("link", { name: "Open Admin Assistant" }).click();
+  await page.getByRole("region", { name: "Tools" }).getByRole("link", { name: "Admin Assistant" }).click();
   await expect(page.getByRole("heading", { name: "Admin Assistant", level: 1 })).toBeVisible();
 
   // A question changes nothing.

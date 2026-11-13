@@ -117,7 +117,8 @@ an `appSlug` disappear when that app is deactivated.
   store processed event ids, and make handling idempotent. Never grant a plan from a client redirect.
 - **Admin support access** must be requested with a reason, explicitly approved by the user,
   time-limited, least-privilege, visible to the user, and audit-logged. Never build silent
-  impersonation or "log in as user".
+  impersonation or "log in as user". Remote view (`src/server/services/support-access.ts`) is the
+  implementation: anything shown there must use read-only functions (pass `markRead: false` etc.).
 - Team members can mark items for deletion but **cannot permanently delete**; only the host can.
 - Garwin AI commission (15%) and upload fees (app $39.99, theme $29.99, widget $19.99) are
   calculated server-side only.

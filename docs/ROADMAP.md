@@ -45,7 +45,7 @@
 | 3 | Core apps: Storage (R2, shared quota, permissions, mark-for-deletion), Calendar, Contacts, Messages, notifications, teams | |
 | 4 | Workspace: draggable/resizable widgets, themes, Pages menu | |
 | 5 | AppZone: marketplace, download limits, developer applications, sandbox origin, upload fees, Stripe Connect commission | |
-| 6 | Admin: members, support tickets, audited support access, analytics, real health checks | |
+| 6 | Admin: members, support tickets, audited support access, analytics, real health checks | Partly done: members list and statuses, remote view (user-approved), Console, health and ticket-age widgets. Support ticket screens and analytics next. |
 | 7 | Assistant: AI provider integration | |
 
 ## Open decisions (owner)

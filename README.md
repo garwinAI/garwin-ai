@@ -126,6 +126,35 @@ Admin → **App update** compares the `dev` branch with the `live` branch on Git
 - GitHub turns off scheduled workflows in repositories with no activity for 60 days; re-enable it
   under GitHub → Actions → Scheduled deploy if that ever happens.
 
+## Admin home, users, remote view and Console
+
+- **Admin home** (`/admin`) is a dashboard of blocks: system health (color + what the app needs),
+  users donut (paid / free), unanswered support tickets by age (24 h light green, 48 h orange,
+  72 h red), your unread notifications and messages, live activity, launch checklist, App update,
+  tools, **All users** and **AppZone apps, widgets and themes**.
+- **All users**: search by name or email, filter (All, Free, Paid, Pro, Team members, Hosts, Admins,
+  Needs attention, Deleted), sort (Newest, A–Z, Z–A). Each user has **View**, a **status** menu
+  (Active, Needs attention, Inactive, Marked for deletion, Deleted), **Edit** (name, email, role,
+  private note), **Remote view** and **Delete**. Inactive, Marked for deletion and Deleted users are
+  signed out everywhere and can't sign in. Delete keeps their data so they can be restored (set
+  them Active again).
+- **Remote view**: the Admin gives a reason; the user gets a notification and a pop-up
+  "Admin [name] is requesting permission to view your account" with **Accept** / **Deny**. After
+  accepting, the Admin can see (never change) their account, storage, apps, messages and
+  notifications for 60 minutes, under a red "ADMIN remotely viewing [name]'s account" banner with
+  **End remote view**. The user sees a banner too and can end it. Every request, answer and page
+  viewed is in the audit log and Console.
+- **Console** (Apps → Admin apps → Console, `/console`): a live, terminal-style log of sign-ups,
+  status changes and deletions, plan upgrades/downgrades, AppZone acquisitions, price changes,
+  health color changes, overdue support tickets, remote views, launch checklist changes, deploys,
+  storage and team changes. **View settings** (color theme, text size, window size, times, which
+  events) are remembered per device. **Record** / **Stop Recording** saves what was shown as a
+  `.txt` file in your Storage (folder "Console recordings"); **Clear** empties the screen;
+  **Close** goes back to Apps.
+- Console only shows events from features that exist. Support ticket screens, calendar events, file
+  uploads, public/private files and AppZone publishing/purchasing arrive in later phases; Console
+  already has wording for them.
+
 ## Launch checklist
 
 Admin → **Launch checklist** (`/admin/launch`) lists what's left before launch: Stripe keys and

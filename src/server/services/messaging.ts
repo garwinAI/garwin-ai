@@ -89,8 +89,11 @@ export async function listConversations(actor: Actor) {
   );
 }
 
-/** Messages in a conversation (newest 100), oldest first. Marks the conversation read. */
-export async function getThread(actor: Actor, conversationId: string) {
+/**
+ * Messages in a conversation (newest 100), oldest first. Marks the conversation read, except for
+ * Admin remote view (`markRead: false`), which must never change the user's data.
+ */
+export async function getThread(actor: Actor, conversationId: string, opts: { markRead?: boolean } = {}) {
   const { conversation } = await accessibleConversation(actor, conversationId);
   const rows = await db
     .select({ id: messages.id, body: messages.body, createdAt: messages.createdAt, senderId: messages.senderUserId, senderName: users.name })
@@ -99,6 +102,7 @@ export async function getThread(actor: Actor, conversationId: string) {
     .where(and(eq(messages.conversationId, conversation.id), isNull(messages.deletedAt)))
     .orderBy(desc(messages.createdAt))
     .limit(100);
+  if (opts.markRead === false) return { conversation, messages: rows.reverse() };
   await db
     .insert(conversationParticipants)
     .values({ conversationId: conversation.id, userId: actor.id, lastReadAt: new Date() })

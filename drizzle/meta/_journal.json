@@ -71,6 +71,13 @@
       "when": 1794609361229,
       "tag": "0009_launch_checklist",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794612575125,
+      "tag": "0010_admin_console",
+      "breakpoints": true
     }
   ]
 }

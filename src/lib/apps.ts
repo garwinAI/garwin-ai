@@ -99,6 +99,20 @@ export const BUILT_IN_APPS: BuiltInApp[] = [
   { slug: "spreadsheets", name: "Spreadsheets", tagline: "Numbers, made easy.", description: "Build spreadsheets with formulas and let the Assistant analyze them.", href: null, canDeactivate: true, color: "from-orange-300 to-amber-600" },
 ];
 
+/**
+ * Apps only platform Admins see (under Apps). Not part of any plan, never installed per account;
+ * every page behind them checks requireAdmin() on the server.
+ */
+export const ADMIN_APPS = [
+  {
+    slug: "console",
+    name: "Console",
+    tagline: "Live log of everything happening on Garwin AI.",
+    href: "/console",
+    color: "from-neutral-800 to-black",
+  },
+] as const;
+
 /** `includedApps` comes from the server entitlement service (plan.includedApps). */
 export function appIncludedInPlan(app: BuiltInApp, includedApps: readonly string[]) {
   return includedApps.includes(app.slug);

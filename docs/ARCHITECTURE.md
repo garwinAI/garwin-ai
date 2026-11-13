@@ -19,6 +19,27 @@ Stripe handles billing (see below). Future services (added in their phase, each 
 developer payouts, object storage (R2/S3) for files, an email provider, a realtime provider for
 Messages, an AI provider for the Assistant, and a **separate domain** for sandboxed AppZone items.
 
+## Admin, remote view and Console
+
+- **User status** (`users.status`): only `active` and `needs_attention` can sign in; the session
+  check filters on it, so blocking a user ends every session immediately. `src/lib/user-status.ts`.
+- **Admin lists**: `src/server/services/admin-users.ts` (users with their own workspace's plan,
+  team facts, search/filter/sort; AppZone items with acquisition counts). Pure option parsing in
+  `src/lib/admin-dashboard.ts`.
+- **Remote view** uses the existing support-access tables: `requestRemoteView` → user's
+  `decideRemoteView` (pop-up in the app layout) → `openRemoteView` checks the grant (requester,
+  approved, not expired, scope) on every page and logs `support_access.viewed`. Pages read with the
+  owner's identity through existing read functions only; `getThread(..., { markRead: false })`
+  keeps message read-state untouched. Never impersonation: the Admin's own session is unchanged.
+- **Console** reads the append-only `audit_logs` (`src/server/services/console.ts`), formats lines
+  in `src/lib/console-log.ts`, and polls `/api/admin/console?afterId=` every 3 s. System events
+  (health color changes, 24/48/72 h ticket reminders) are written by `runSystemChecks()` in
+  `src/server/services/system.ts` when Admin home or Console loads (at most every 30 s while polling).
+  The site can't record its own outage while it's down; it records the color change when it's back.
+- **Recordings**: text in `console_recordings`, plus a `storage_objects` file (storage key
+  `console-recording:<id>`) in the Admin's "Console recordings" folder, counted against quota.
+  Deleting the file deletes the recording.
+
 ## Publishing and launch
 
 - **Deploy Now / Update App** fast-forward `live` to the reviewed dev commit through the GitHub API

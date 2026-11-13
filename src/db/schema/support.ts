@@ -51,6 +51,7 @@ export const supportAccessScope = pgEnum("support_access_scope", [
   "apps.view",
   "billing.view",
   "messages.view",
+  "notifications.view",
 ]);
 
 export const supportAccessGrants = pgTable(

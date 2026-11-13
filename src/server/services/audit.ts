@@ -14,6 +14,7 @@ export async function recordAudit(
     action: string; // noun.verb
     targetType?: string;
     targetId?: string;
+    supportGrantId?: string;
     metadata?: Record<string, unknown>;
     meta?: RequestMeta;
   },
@@ -26,6 +27,7 @@ export async function recordAudit(
     action: entry.action,
     targetType: entry.targetType,
     targetId: entry.targetId,
+    supportGrantId: entry.supportGrantId,
     metadata: entry.metadata,
     ip: entry.meta?.ip ?? null,
     userAgent: entry.meta?.userAgent ?? null,

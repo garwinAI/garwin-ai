@@ -3,10 +3,11 @@
 //  - Sessions expire after 7 days without use (idle) or 30 days in total (absolute).
 //  - A new session is created on every sign-in (no session fixation).
 import "server-only";
-import { and, desc, eq, gt, isNull, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { sessions, users, type Session } from "@/db/schema";
 import { generateToken, hashToken, looksLikeToken } from "@/lib/security/tokens";
+import { SIGN_IN_STATUSES } from "@/lib/user-status";
 import type { RequestMeta } from "./security-events";
 
 export const SESSION_ABSOLUTE_SEC = 30 * 24 * 60 * 60;
@@ -41,6 +42,8 @@ export async function validateSessionToken(token: string | undefined) {
         eq(sessions.tokenHash, hashToken(token)),
         isNull(sessions.revokedAt),
         gt(sessions.expiresAt, sql`now()`),
+        // Inactive, marked-for-deletion and deleted users are signed out everywhere at once.
+        inArray(users.status, [...SIGN_IN_STATUSES]),
         gt(sessions.lastSeenAt, sql`now() - ${sql.raw(`interval '${SESSION_IDLE_SEC} seconds'`)}`),
       ),
     );

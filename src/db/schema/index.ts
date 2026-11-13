@@ -10,3 +10,4 @@ export * from "./messaging";
 export * from "./support";
 export * from "./audit";
 export * from "./launch";
+export * from "./console";

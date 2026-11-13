@@ -4,7 +4,7 @@ import { Lock, Store } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { getEntitlements } from "@/server/services/entitlements";
 import { listInstalledApps } from "@/server/services/apps";
-import { BUILT_IN_APPS } from "@/lib/apps";
+import { ADMIN_APPS, BUILT_IN_APPS } from "@/lib/apps";
 import { PageBody, PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +54,28 @@ export default async function AppsPage() {
           })}
         </ul>
         <p className="text-sm text-neutral-500">You&apos;re on the {plan.name} plan.</p>
+        {user.role === "admin" && (
+          <section aria-labelledby="admin-apps-title" className="space-y-3">
+            <h2 id="admin-apps-title" className="font-semibold">Admin apps</h2>
+            <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Admin apps">
+              {ADMIN_APPS.map((app) => (
+                <li key={app.slug}>
+                  <Link href={app.href} className="card group block h-full overflow-hidden transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-brand-600">
+                    <div className={cn("flex h-24 items-end bg-gradient-to-br p-3 font-mono text-xs text-green-400", app.color)} aria-hidden="true">
+                      $ tail -f garwin.log_
+                    </div>
+                    <div className="p-4">
+                      <p className="flex items-center justify-between gap-2 font-medium">
+                        {app.name} <Badge>Admins only</Badge>
+                      </p>
+                      <p className="mt-0.5 text-sm text-neutral-500">{app.tagline}</p>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </PageBody>
     </>
   );

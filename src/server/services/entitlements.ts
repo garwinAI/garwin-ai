@@ -37,6 +37,8 @@ import {
   type EntitledPlan,
 } from "@/lib/entitlements";
 
+import { recordAudit } from "./audit";
+
 const log = logger.child({ module: "entitlements" });
 
 /**
@@ -334,6 +336,17 @@ export async function acquireAppzoneItem(user: UserRef, itemId: string) {
       })
       .returning();
     log.info("appzone.acquired", { accountId: ent.accountId, itemId, counts: decision.countsTowardFreeLimit });
+    await recordAudit(
+      {
+        accountId: ent.accountId,
+        actorUserId: user.id,
+        action: "appzone.acquired",
+        targetType: "appzone_item",
+        targetId: itemId,
+        metadata: { name: item.name, kind: item.kind, priceCents: item.priceCents },
+      },
+      tx,
+    );
     return { acquisition, created: true };
   });
 }

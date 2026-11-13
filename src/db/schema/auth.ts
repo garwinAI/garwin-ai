@@ -6,6 +6,14 @@ import { createdAt, ts, updatedAt } from "./_shared";
 /** Platform role. "admin" = Garwin AI staff. Workspace roles live on account_members. */
 export const userRole = pgEnum("user_role", ["member", "admin"]);
 
+/**
+ * Set by Admins. active and needs_attention can sign in; inactive, marked_for_deletion and deleted
+ * can't (their sessions end when the status changes). "deleted" keeps the row (and its audit
+ * history) so an Admin can restore the account.
+ */
+export const USER_STATUSES = ["active", "needs_attention", "inactive", "marked_for_deletion", "deleted"] as const;
+export const userStatus = pgEnum("user_status", USER_STATUSES);
+
 export const users = pgTable(
   "users",
   {
@@ -16,10 +24,18 @@ export const users = pgTable(
     role: userRole("role").notNull().default("member"),
     // Null until the user clicks the link in the verification email.
     emailVerifiedAt: ts("email_verified_at"),
+    status: userStatus("status").notNull().default("active"),
+    statusChangedAt: ts("status_changed_at"),
+    // Private Admin note about this user (never shown to the user).
+    adminNote: text("admin_note"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [check("users_email_lowercase", sql`${t.email} = lower(${t.email})`)],
+  (t) => [
+    check("users_email_lowercase", sql`${t.email} = lower(${t.email})`),
+    check("users_admin_note_length", sql`${t.adminNote} is null or length(${t.adminNote}) <= 2000`),
+    index("users_status_idx").on(t.status),
+  ],
 );
 
 export const SECURITY_EVENTS = [

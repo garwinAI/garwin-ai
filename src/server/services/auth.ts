@@ -18,6 +18,8 @@ import type { User } from "@/db/schema";
 import { consumeToken, issueToken, peekToken } from "./auth-tokens";
 import { enforce, hit, LIMITS, resetLimit } from "./rate-limit";
 import { recordSecurityEvent, type RequestMeta } from "./security-events";
+import { recordAudit } from "./audit";
+import { canSignIn } from "@/lib/user-status";
 import { revokeAllSessions, revokeSession } from "./sessions";
 import { createUser, findUserByEmail, findUserById, markEmailVerified, setPasswordHash, type PublicUser } from "./users";
 
@@ -48,6 +50,7 @@ export async function registerUser(input: { name: string; email: string; passwor
   }
   const user = await createUser({ name: input.name, email: input.email, passwordHash: await hashPassword(input.password) });
   await recordSecurityEvent({ userId: user.id, email: user.email, event: "signup", ...meta });
+  await recordAudit({ accountId: null, actorUserId: user.id, action: "user.signed_up", targetType: "user", targetId: user.id, meta });
   log.info("user.signed_up", { userId: user.id });
   return user;
 }
@@ -64,6 +67,8 @@ export async function authenticate(input: { email: string; password: string }, m
   const valid = await verifyPassword(input.password, user?.passwordHash ?? (await dummyHash()));
   await recordSecurityEvent({ userId: user?.id ?? null, email: input.email, event: "login", success: Boolean(user && valid), ...meta });
   if (!user || !valid) throw new AppError("UNAUTHENTICATED", "Incorrect email or password.");
+  // Checked only after the password, so status never reveals whether an email is registered.
+  if (!canSignIn(user.status)) throw new AppError("FORBIDDEN", "This account isn't active. Contact Garwin AI support for help.");
 
   await resetLimit(`login:email-ip:${input.email}|${ipKey(meta)}`);
   if (needsRehash(user.passwordHash)) await setPasswordHash(user.id, await hashPassword(input.password));
