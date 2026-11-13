@@ -1,0 +1,51 @@
+name: Scheduled deploy
+
+# Publishes deploys scheduled from Settings → General → Deploy New App Version.
+# A schedule is a tag `deploy-schedule/<unix seconds>` pointing at the dev version an Admin
+# reviewed. Once its time has passed, this fast-forwards `live` to that version (never forced),
+# which makes Vercel build garwinai.com. If live can't be fast-forwarded, a `deploy-failed/<time>`
+# tag is left so the app can show the problem. See src/lib/app-update.ts.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scheduled-deploy
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Publish scheduled deploys that are due
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          now=$(date +%s)
+          gh api "repos/$REPO/git/matching-refs/tags/deploy-schedule/" --jq '.[] | "\(.ref) \(.object.sha)"' > schedules.txt
+          if [ ! -s schedules.txt ]; then echo "Nothing scheduled."; exit 0; fi
+
+          while read -r ref sha; do
+            at="${ref##*/}"
+            case "$at" in ''|*[!0-9]*) echo "Skipping unexpected tag $ref"; continue ;; esac
+            if [ "$at" -gt "$now" ]; then echo "$ref is not due yet."; continue; fi
+
+            ahead=$(gh api "repos/$REPO/compare/live...$sha" --jq .ahead_by)
+            if [ "$ahead" = "0" ]; then
+              echo "live already contains $sha; nothing to publish."
+            elif gh api -X PATCH "repos/$REPO/git/refs/heads/live" -f sha="$sha" -F force=false > /dev/null; then
+              echo "Published $sha to live."
+            else
+              echo "::error::Could not fast-forward live to $sha (live has changes that dev doesn't)."
+              gh api "repos/$REPO/git/refs" -f ref="refs/tags/deploy-failed/$at" -f sha="$sha" > /dev/null || true
+            fi
+            gh api -X DELETE "repos/$REPO/git/$ref"
+          done < schedules.txt

@@ -24,6 +24,8 @@ const REPO_FILES = {
 let pendingTree = null;
 let pendingMessage = null;
 let lastDevCommit = null;
+/** Git tags created through the API: ref → sha. */
+const tags = new Map();
 
 // Fake Anthropic Messages API. Scripted like a real tool-use exchange: first it tries a protected
 // file and edits README.md, then (once it has the tool results) it answers in text.
@@ -59,9 +61,20 @@ function github(req, res) {
   if (req.method === "POST" && req.url === "/github/reset") {
     liveSha = "a".repeat(40);
     lastDevCommit = null;
+    tags.clear();
     return json(200, {});
   }
   if (req.method === "GET" && req.url === "/github/last-dev-commit") return json(200, lastDevCommit ?? {});
+  // Test hook: what the Scheduled deploy workflow would leave behind if live couldn't be updated.
+  if (req.method === "POST" && req.url === "/github/fail-schedule") {
+    for (const [ref, sha] of [...tags]) {
+      if (ref.startsWith("refs/tags/deploy-schedule/")) {
+        tags.delete(ref);
+        tags.set(ref.replace("deploy-schedule", "deploy-failed"), sha);
+      }
+    }
+    return json(200, {});
+  }
   const path = req.url.replace(/^\/repos\/[^/]+\/[^/]+/, "").split("?")[0];
   if (path === req.url.split("?")[0]) return false;
   if (!String(req.headers.authorization ?? "").startsWith("Bearer ")) return json(401, { message: "Bad credentials" });
@@ -78,6 +91,26 @@ function github(req, res) {
   if (req.method === "GET" && path.startsWith("/contents/")) {
     const file = REPO_FILES[decodeURIComponent(path.slice("/contents/".length))];
     return file === undefined ? json(404, { message: "Not Found" }) : res.writeHead(200, { "content-type": "text/plain" }).end(file);
+  }
+  // --- Scheduled deploys are git tags (see src/lib/app-update.ts)
+  if (req.method === "GET" && path.startsWith("/git/matching-refs/tags/")) {
+    const prefix = "refs/tags/" + path.slice("/git/matching-refs/tags/".length);
+    return json(200, [...tags].filter(([ref]) => ref.startsWith(prefix)).map(([ref, sha]) => ({ ref, object: { sha, type: "commit" } })));
+  }
+  if (req.method === "POST" && path === "/git/refs") {
+    let body = "";
+    req.on("data", (c) => (body += c));
+    req.on("end", () => {
+      const { ref, sha } = JSON.parse(body);
+      if (tags.has(ref)) return json(422, { message: "Reference already exists" });
+      tags.set(ref, sha);
+      json(201, { ref, object: { sha } });
+    });
+    return true;
+  }
+  if (req.method === "DELETE" && path.startsWith("/git/refs/tags/")) {
+    const ref = path.slice("/git/".length);
+    return tags.delete(ref) ? res.writeHead(204).end() : json(422, { message: "Reference does not exist" });
   }
   if (req.method === "POST" && (path === "/git/trees" || path === "/git/commits")) {
     let body = "";

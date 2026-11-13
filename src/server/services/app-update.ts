@@ -2,8 +2,14 @@
 import "server-only";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { shortSha, type UpdateStatus } from "@/lib/app-update";
-import { fastForwardLive, fetchUpdateStatus } from "@/server/app-update/github";
+import { parseScheduleRef, scheduleRefFor, scheduleTimeProblem, shortSha, type UpdateStatus } from "@/lib/app-update";
+import {
+  createScheduleTag,
+  deleteScheduleTag,
+  fastForwardLive,
+  fetchUpdateStatus,
+  listScheduledDeploys,
+} from "@/server/app-update/github";
 import { recordAudit } from "./audit";
 import { markTypeRead, notify, notifyOnce } from "./notifications";
 import { enforce, LIMITS } from "./rate-limit";
@@ -69,4 +75,82 @@ export async function publishUpdate(admin: { id: string; name: string; role: str
     data: { sha: status.devSha },
   });
   return status;
+}
+
+// ---------------------------------------------------------------- scheduled deploys
+
+type Admin = { id: string; name: string; role: string };
+
+function assertAdmin(admin: Admin) {
+  if (admin.role !== "admin") throw new AppError("FORBIDDEN", "Only an Admin can update the app.");
+}
+
+/** The pending schedule (at most one) and any failed scheduled attempts. Never throws. */
+export async function getDeploySchedule() {
+  try {
+    const all = await listScheduledDeploys();
+    return { scheduled: all.find((d) => d.kind === "scheduled") ?? null, failed: all.filter((d) => d.kind === "failed"), ok: true as const };
+  } catch (err) {
+    log.warn("app_update.schedule_list_failed", { err });
+    return { scheduled: null, failed: [], ok: false as const };
+  }
+}
+
+/**
+ * Schedules publishing the dev version the Admin reviewed (`expectedSha`) at `at`. Replaces any
+ * earlier schedule, so there is never more than one.
+ */
+export async function scheduleUpdate(admin: Admin, expectedSha: string, at: Date, meta: RequestMeta) {
+  assertAdmin(admin);
+  await enforce(`app-schedule:${admin.id}`, LIMITS.appSchedulePerUser);
+  const problem = scheduleTimeProblem(at);
+  if (problem) throw new AppError("VALIDATION", problem);
+
+  const status = await fetchUpdateStatus();
+  if (status.state === "up_to_date") throw new AppError("CONFLICT", "The live site already matches dev.");
+  if (status.state !== "update_available") throw new AppError("CONFLICT", "The app can't be updated right now. Reload the page for details.");
+  if (status.devSha !== expectedSha) throw new AppError("CONFLICT", "Dev changed since this page loaded. Reload to review the latest changes, then schedule.");
+
+  const ref = scheduleRefFor(at);
+  const { scheduled } = await getDeploySchedule();
+  await createScheduleTag(ref, status.devSha);
+  if (scheduled && scheduled.ref !== ref) await deleteScheduleTag(scheduled.ref);
+
+  log.info("app_update.scheduled", { userId: admin.id, sha: status.devSha, at: at.toISOString() });
+  await recordAudit({
+    accountId: null,
+    actorUserId: admin.id,
+    actorType: "admin",
+    action: "app.update_scheduled",
+    targetType: "branch",
+    targetId: "live",
+    metadata: { sha: status.devSha, commits: status.count, at: at.toISOString(), replaced: scheduled?.at.toISOString() ?? null },
+    meta,
+  });
+  await notify(await listAdminIds(), {
+    type: "app.update_scheduled",
+    title: "App update scheduled",
+    body: `${admin.name} scheduled ${status.count} change${status.count === 1 ? "" : "s"} (version ${shortSha(status.devSha)}) to go live at ${at.toISOString().slice(0, 16).replace("T", " ")} UTC.`,
+    link: "/settings/general#deploy",
+    data: { sha: status.devSha, at: at.toISOString() },
+  });
+}
+
+/** Cancels a pending schedule, or dismisses a failed attempt. */
+export async function removeScheduledDeploy(admin: Admin, ref: string, meta: RequestMeta) {
+  assertAdmin(admin);
+  const parsed = parseScheduleRef(ref, "0".repeat(40));
+  if (!parsed) throw new AppError("VALIDATION", "Reload the page and try again.");
+  await deleteScheduleTag(ref);
+  await recordAudit({
+    accountId: null,
+    actorUserId: admin.id,
+    actorType: "admin",
+    action: parsed.kind === "scheduled" ? "app.update_schedule_canceled" : "app.update_failure_dismissed",
+    targetType: "branch",
+    targetId: "live",
+    metadata: { at: parsed.at.toISOString() },
+    meta,
+  });
+  return parsed.kind;
 }

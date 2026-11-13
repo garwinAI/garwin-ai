@@ -53,7 +53,7 @@ erDiagram
 ```
 
 `audit_logs` deliberately has **no foreign keys** so history survives deletions, and a trigger
-rejects `UPDATE`, `DELETE` and `TRUNCATE`. `stripe_events` and `rate_limits` stand alone.
+rejects `UPDATE`, `DELETE` and `TRUNCATE`. `stripe_events`, `rate_limits` and `launch_checklist` (Admin launch steps ticked on this site) stand alone.
 
 ## Core rules
 

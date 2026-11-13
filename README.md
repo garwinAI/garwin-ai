@@ -112,6 +112,27 @@ Admin → **App update** compares the `dev` branch with the `live` branch on Git
   published" notification after each update. Notifications are under **Notifications** in the sidebar.
 - Every update is written to the audit log (`app.updated`).
 
+**Deploy New App Version** (Settings → General, Admins only) does the same with two buttons:
+
+- **Deploy Now** publishes immediately (same as Update App).
+- **Schedule** publishes the version you see at a date and time you pick (your local time), within
+  about 15 minutes of it. Changes pushed to dev afterwards are not included. Scheduling again
+  replaces the earlier schedule; **Cancel schedule** removes it.
+- How scheduling works: the schedule is saved on GitHub as a tag `deploy-schedule/<time>` pointing at
+  that version, and the **Scheduled deploy** GitHub Actions workflow
+  (`.github/workflows/scheduled-deploy.yml`, every 10 minutes) moves `live` forward once the time has
+  passed. It needs no extra secrets and works the same from dev.garwinai.com and garwinai.com. If live
+  can't be moved forward (it has changes dev doesn't), the app shows the failed schedule.
+- GitHub turns off scheduled workflows in repositories with no activity for 60 days; re-enable it
+  under GitHub → Actions → Scheduled deploy if that ever happens.
+
+## Launch checklist
+
+Admin → **Launch checklist** (`/admin/launch`) lists what's left before launch: Stripe keys and
+prices, the Claude Console API key, GitHub, email, changing the exposed secrets, legal pages and the
+domain. Steps the app can detect (keys present, prices in Stripe, first webhook received, live mode)
+tick themselves; the rest are ticked by an Admin. The dev and live sites each keep their own list.
+
 One-time setup:
 
 1. GitHub → Settings → Developer settings → **Fine-grained tokens** → Generate. Repository access:

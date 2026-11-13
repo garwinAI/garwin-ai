@@ -26,6 +26,7 @@ export const LIMITS = {
   verifyResendPerUser: { limit: 3, windowSec: 60 * 60 },
   passwordChangePerUser: { limit: 5, windowSec: 15 * 60 },
   appUpdatePerUser: { limit: 10, windowSec: 60 * 60 },
+  appSchedulePerUser: { limit: 30, windowSec: 60 * 60 },
   siteEditPerUser: { limit: 30, windowSec: 60 * 60 },
   checkoutPerUser: { limit: 10, windowSec: 60 * 60 },
 } satisfies Record<string, Limit>;

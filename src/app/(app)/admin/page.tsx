@@ -12,6 +12,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { pingDatabase } from "@/db";
 import { DEV_BRANCH, LIVE_BRANCH, shortSha, updateBlockedReason } from "@/lib/app-update";
 import { checkForUpdate } from "@/server/services/app-update";
+import { getLaunchChecklist } from "@/server/services/launch";
 import { UpdateAppButton } from "./update-app";
 
 export const metadata: Metadata = { title: "Admin" };
@@ -28,11 +29,13 @@ const UPCOMING: { name: string; phase?: number; href?: string }[] = [
 ];
 
 export default async function AdminPage() {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const { total, teamMembers, developers, perPlan: planCount } = await getMemberStats();
   const config = env();
   const update = await checkForUpdate();
+  const launch = await getLaunchChecklist(admin);
+  const launchDone = launch.filter((i) => i.done).length;
   const available = update.state === "update_available" ? update : null;
 
   const health = computeHealth({
@@ -62,6 +65,17 @@ export default async function AdminPage() {
               <p className="mt-1 text-sm">All systems normal.</p>
             )}
           </div>
+        </section>
+
+        <section aria-labelledby="launch-title" className="card flex flex-wrap items-center justify-between gap-3 p-5">
+          <div>
+            <h2 id="launch-title" className="font-semibold">Launch checklist</h2>
+            <p className="mt-1 text-sm text-neutral-600">
+              {launchDone} of {launch.length} steps done
+              {launchDone < launch.length && `. Next: ${launch.find((i) => !i.done)!.title}.`}
+            </p>
+          </div>
+          <ButtonLink href="/admin/launch" variant="secondary">Open launch checklist</ButtonLink>
         </section>
 
         <section id="app-update" aria-labelledby="app-update-title" className="card scroll-mt-20 p-5">

@@ -66,3 +66,36 @@ export function updateBlockedReason(status: UpdateStatus): string | null {
 }
 
 export const shortSha = (sha: string) => sha.slice(0, 7);
+
+// ---------------------------------------------------------------- scheduled deploys
+//
+// A scheduled deploy is a git tag `deploy-schedule/<unix seconds>` pointing at the dev version the
+// Admin reviewed. The "Scheduled deploy" GitHub Actions workflow (.github/workflows/scheduled-deploy.yml)
+// checks every 10 minutes and fast-forwards live to that version once its time has passed. If it
+// can't, it leaves a `deploy-failed/<unix seconds>` tag so the app can show what happened. Storing
+// the schedule in GitHub (not a database) means it works the same from the dev and the live site.
+
+export const SCHEDULE_TAG_PREFIX = "deploy-schedule/";
+export const FAILED_TAG_PREFIX = "deploy-failed/";
+/** How long after the chosen time the workflow may take to publish (it runs every 10 minutes, and GitHub can delay it). */
+export const SCHEDULE_PRECISION_MIN = 15;
+export const SCHEDULE_MAX_DAYS = 60;
+
+export type ScheduledDeploy = { kind: "scheduled" | "failed"; ref: string; at: Date; sha: string };
+
+/** "refs/tags/deploy-schedule/1767225600" → its kind and time, or null for any other ref. */
+export function parseScheduleRef(ref: string, sha: string): ScheduledDeploy | null {
+  const match = ref.match(/^refs\/tags\/(deploy-schedule|deploy-failed)\/(\d{9,11})$/);
+  if (!match || !shaSchema.safeParse(sha).success) return null;
+  return { kind: match[1] === "deploy-schedule" ? "scheduled" : "failed", ref, at: new Date(Number(match[2]) * 1000), sha };
+}
+
+export const scheduleRefFor = (at: Date) => `refs/tags/${SCHEDULE_TAG_PREFIX}${Math.floor(at.getTime() / 1000)}`;
+
+/** A user-facing problem with the chosen time, or null when it's fine. */
+export function scheduleTimeProblem(at: Date, now = new Date()): string | null {
+  if (Number.isNaN(at.getTime())) return "Choose a date and time.";
+  if (at.getTime() < now.getTime() + 5 * 60_000) return "Choose a time at least 5 minutes from now, or use Deploy Now.";
+  if (at.getTime() > now.getTime() + SCHEDULE_MAX_DAYS * 86_400_000) return `Choose a time within the next ${SCHEDULE_MAX_DAYS} days.`;
+  return null;
+}

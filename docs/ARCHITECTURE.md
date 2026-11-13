@@ -19,6 +19,18 @@ Stripe handles billing (see below). Future services (added in their phase, each 
 developer payouts, object storage (R2/S3) for files, an email provider, a realtime provider for
 Messages, an AI provider for the Assistant, and a **separate domain** for sandboxed AppZone items.
 
+## Publishing and launch
+
+- **Deploy Now / Update App** fast-forward `live` to the reviewed dev commit through the GitHub API
+  (`src/server/app-update/github.ts`).
+- **Scheduled deploys** are git tags `deploy-schedule/<unix seconds>` created by the app; the
+  `scheduled-deploy.yml` GitHub Actions workflow publishes due ones every 10 minutes with the
+  workflow's own token and leaves `deploy-failed/<time>` tags on failure. No database or Vercel cron
+  is involved, because the dev and live sites have separate databases and Vercel crons only run in
+  production.
+- **Launch checklist**: steps in `src/lib/launch-checklist.ts`; manual ticks in `launch_checklist`
+  (per site), automatic steps computed from `env()` and billing data in `src/server/services/launch.ts`.
+
 ## Billing (Stripe)
 
 - `src/server/stripe/client.ts` is the only place the Stripe key is read. `src/server/services/billing.ts`

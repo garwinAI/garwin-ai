@@ -64,6 +64,13 @@
       "when": 1794263236250,
       "tag": "0008_conversation_channels",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794609361229,
+      "tag": "0009_launch_checklist",
+      "breakpoints": true
     }
   ]
 }
