@@ -28,7 +28,7 @@ export default async function ConsolePage() {
               {recordings.map((r) => (
                 <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                   <span>
-                    {r.fileName ?? "Recording"} · {r.lineCount} lines · <LocalTime iso={r.startedAt.toISOString()} />
+                    {r.fileName ?? "Recording"} · {r.lineCount} line{r.lineCount === 1 ? "" : "s"} · <LocalTime iso={r.startedAt.toISOString()} />
                   </span>
                   <a href={`/api/admin/console/recordings/${r.id}`} className="inline-flex items-center gap-1 text-brand-700 hover:underline">
                     <Download className="h-4 w-4" aria-hidden="true" /> Download
