@@ -27,6 +27,7 @@ export const LIMITS = {
   passwordChangePerUser: { limit: 5, windowSec: 15 * 60 },
   appUpdatePerUser: { limit: 10, windowSec: 60 * 60 },
   siteEditPerUser: { limit: 30, windowSec: 60 * 60 },
+  billingPerAccount: { limit: 20, windowSec: 60 * 60 },
 } satisfies Record<string, Limit>;
 
 export type RateResult = { allowed: boolean; count: number; retryAfterSec: number };

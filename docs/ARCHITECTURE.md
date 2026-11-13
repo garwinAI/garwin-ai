@@ -9,14 +9,28 @@ Browser ──> Vercel (Next.js 16)
               │    └─ server actions ─> src/lib/actions.ts runAction (validation + error handling)
               ├─ src/lib/auth/*        sessions: signed JWT cookie, re-checked against DB every request
               ├─ src/server/services/* all database access (Drizzle)
-              └─ src/lib/*             pure logic: env, logger, errors, validation, plans, entitlements, health
+              ├─ src/server/stripe/*   Stripe REST client + webhook signature check
+              └─ src/lib/*             pure logic: env, logger, errors, validation, plans, entitlements, billing, health
                                  │
                                  v
                            PostgreSQL (pooled connection in production)
 ```
 
-Future services (added in their phase, each optional until then): Stripe (billing, Connect for
-developer payouts), object storage (R2/S3) for files, an email provider, a realtime provider for
+Stripe handles plan billing (Phase 2, optional until its keys are set): Checkout and the billing
+portal are Stripe-hosted pages, and `POST /api/stripe/webhook` is the only way a plan is granted.
+
+```
+Host ──> createCheckout() ──> Stripe Checkout ──(pays)──> Stripe
+                                                            │ signed webhook (retried until 2xx)
+                                                            v
+              /api/stripe/webhook: verifyWebhook(raw body) ─> handleStripeEvent()
+                 stripe_events (once per event id) ─> re-fetch subscription from Stripe
+                 ─> syncSubscription() writes `subscriptions` ─> planForAccount() sees the plan
+                 ─> invoice.paid / invoice.payment_failed write the `payments` ledger
+```
+
+Future services (added in their phase, each optional until then): Stripe Connect for
+developer payouts, object storage (R2/S3) for files, an email provider, a realtime provider for
 Messages, an AI provider for the Assistant, and a **separate domain** for sandboxed AppZone items.
 
 ## Request flow

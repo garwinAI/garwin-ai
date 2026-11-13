@@ -11,14 +11,13 @@ import { ButtonLink } from "@/components/ui/button";
 import { pingDatabase } from "@/db";
 import { DEV_BRANCH, LIVE_BRANCH, shortSha, updateBlockedReason } from "@/lib/app-update";
 import { checkForUpdate } from "@/server/services/app-update";
+import { stripeConfigured } from "@/server/stripe/client";
 import { UpdateAppButton } from "./update-app";
 
 export const metadata: Metadata = { title: "Admin" };
 
 const UPCOMING = [
   { name: "Members", phase: 6 },
-  { name: "Plans & prices", phase: 2 },
-  { name: "Stripe settings", phase: 2 },
   { name: "Apps & marketplace", phase: 5 },
   { name: "Developer applications", phase: 5 },
   { name: "Support tickets", phase: 6 },
@@ -38,7 +37,7 @@ export default async function AdminPage() {
     online: await pingDatabase(),
     critical: false,
     significantIssue: false,
-    paymentsConfigured: Boolean(config.STRIPE_SECRET_KEY && config.STRIPE_WEBHOOK_SECRET),
+    paymentsConfigured: stripeConfigured(),
     assistantConfigured: Boolean(config.ASSISTANT_API_KEY),
     oldestOpenTicketHours: null, // support tickets arrive in Phase 6
   });
@@ -86,6 +85,14 @@ export default async function AdminPage() {
             <p className="mt-1 text-sm text-neutral-600">Describe a change and the Assistant edits the website&apos;s code on the dev site.</p>
           </div>
           <ButtonLink href="/admin/assistant" variant="secondary">Open Admin Assistant</ButtonLink>
+        </section>
+
+        <section aria-labelledby="admin-billing-title" className="card flex flex-wrap items-center justify-between gap-3 p-5">
+          <div>
+            <h2 id="admin-billing-title" className="font-semibold">Plans &amp; prices</h2>
+            <p className="mt-1 text-sm text-neutral-600">Set what each plan costs, connect Stripe and see subscriptions.</p>
+          </div>
+          <ButtonLink href="/admin/billing" variant="secondary">Open Billing</ButtonLink>
         </section>
 
         <div className="grid gap-4 sm:grid-cols-3">
