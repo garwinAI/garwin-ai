@@ -73,6 +73,7 @@ export const itemListQuery = z.object({
   itab: z.enum(ITEM_TABS).catch("free").default("free"),
   ikind: z.enum(ITEM_KINDS).catch("all").default("all"),
   isort: z.enum(ITEM_SORTS).catch("most_bought").default("most_bought"),
+  ipage: z.coerce.number().int().min(1).max(10_000).catch(1).default(1),
 });
 export type ItemListQuery = z.infer<typeof itemListQuery>;
 

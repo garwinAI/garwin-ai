@@ -8,8 +8,21 @@ import type { AdminItemRow } from "@/server/services/admin-users";
 const KIND_LABELS = { all: "All", app: "Apps", widget: "Widgets", theme: "Themes" } as const;
 
 /** AppZone apps, widgets and themes with Free / Paid tabs, a kind filter and sorting. */
-export function ItemsTable({ rows, query, params }: { rows: AdminItemRow[]; query: ItemListQuery; params: Record<string, string> }) {
-  const link = (changes: Record<string, string | null>) => `/admin${withParams(params, changes)}#appzone`;
+export function ItemsTable({
+  rows,
+  total,
+  pageSize,
+  query,
+  params,
+}: {
+  rows: AdminItemRow[];
+  total: number;
+  pageSize: number;
+  query: ItemListQuery;
+  params: Record<string, string>;
+}) {
+  const link = (changes: Record<string, string | number | null>) => `/admin${withParams(params, { ipage: null, ...changes })}#appzone`;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
   return (
     <div className="space-y-4">
       <div role="tablist" aria-label="Price" className="inline-flex rounded-lg bg-neutral-100 p-1 text-sm">
@@ -86,6 +99,18 @@ export function ItemsTable({ rows, query, params }: { rows: AdminItemRow[]; quer
           </table>
         </div>
       )}
+      <div className="flex items-center justify-between text-sm text-neutral-600">
+        <span>
+          {total} item{total === 1 ? "" : "s"}
+          {pages > 1 && ` · page ${query.ipage} of ${pages}`}
+        </span>
+        {pages > 1 && (
+          <span className="flex gap-2">
+            {query.ipage > 1 && <Link className="btn-secondary px-3 py-1 text-sm" href={link({ ipage: query.ipage - 1 })}>Previous</Link>}
+            {query.ipage < pages && <Link className="btn-secondary px-3 py-1 text-sm" href={link({ ipage: query.ipage + 1 })}>Next</Link>}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

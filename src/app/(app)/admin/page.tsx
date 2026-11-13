@@ -241,7 +241,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
           {/* --- AppZone (full width) */}
           <Block title="AppZone apps, widgets and themes" id="appzone" className="md:col-span-2 xl:col-span-4">
-            <ItemsTable rows={items} query={iq} params={params} />
+            <ItemsTable rows={items.rows} total={items.total} pageSize={items.pageSize} query={iq} params={params} />
           </Block>
         </div>
       </PageBody>

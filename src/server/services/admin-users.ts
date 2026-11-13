@@ -177,6 +177,8 @@ export async function updateUser(
 
 // ---------------------------------------------------------------- AppZone items
 
+export const ITEM_PAGE_SIZE = 15;
+
 export type AdminItemRow = { id: string; name: string; kind: string; status: string; priceCents: number; currency: string; acquisitions: number; developer: string };
 
 export async function listAppzoneItemsForAdmin(admin: Admin, query: ItemListQuery) {
@@ -191,13 +193,17 @@ export async function listAppzoneItemsForAdmin(admin: Admin, query: ItemListQuer
         : query.isort === "price_low"
           ? sql`i.price_cents asc, lower(i.name)`
           : sql`acquisitions desc, lower(i.name)`;
-  const res = await db.execute<AdminItemRow>(sql`
+  const filter = sql.join(where, sql` and `);
+  const [res, total] = await Promise.all([
+    db.execute<AdminItemRow>(sql`
     select i.id, i.name, i.kind, i.status, i.price_cents as "priceCents", i.currency,
       (select count(*)::int from appzone_acquisitions q where q.item_id = i.id) as acquisitions,
       d.display_name as developer
     from appzone_items i join developer_profiles d on d.id = i.developer_id
-    where ${sql.join(where, sql` and `)}
+    where ${filter}
     order by ${order}
-    limit 50`);
-  return res.rows;
+    limit ${ITEM_PAGE_SIZE} offset ${(query.ipage - 1) * ITEM_PAGE_SIZE}`),
+    db.execute<{ n: number }>(sql`select count(*)::int as n from appzone_items i where ${filter}`),
+  ]);
+  return { rows: res.rows, total: total.rows[0].n, pageSize: ITEM_PAGE_SIZE };
 }

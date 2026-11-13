@@ -72,7 +72,7 @@ describe("dashboard rules", () => {
     expect(userListQuery.parse({})).toEqual({ q: "", sort: "newest", filter: "all", page: 1 });
     expect(userListQuery.parse({ sort: "za", filter: "pro", page: "3", q: " jane " })).toEqual({ q: "jane", sort: "za", filter: "pro", page: 3 });
     expect(userListQuery.parse({ sort: "drop table", filter: "x", page: "-4" })).toMatchObject({ sort: "newest", filter: "all", page: 1 });
-    expect(itemListQuery.parse({ itab: "paid", isort: "price_low" })).toEqual({ itab: "paid", ikind: "all", isort: "price_low" });
+    expect(itemListQuery.parse({ itab: "paid", isort: "price_low" })).toEqual({ itab: "paid", ikind: "all", isort: "price_low", ipage: 1 });
   });
 
   it("escapes search wildcards and builds links", () => {
