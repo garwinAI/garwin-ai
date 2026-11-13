@@ -19,6 +19,7 @@ import {
   invitations,
   memberPermissions,
   planApps,
+  planPrices,
   plans,
   purchases,
   subscriptions,
@@ -27,6 +28,7 @@ import {
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { GB, isPlanId, type PlanId } from "@/lib/plans";
+import type { PlanPrice } from "@/lib/pricing";
 import {
   decideAcquisition,
   effectivePermissions,
@@ -76,6 +78,15 @@ async function loadPlans(exec: Tx | typeof db = db): Promise<EntitledPlan[]> {
 /** All plans with their included apps, ordered for display. */
 export async function listPlans(): Promise<EntitledPlan[]> {
   return loadPlans();
+}
+
+/** The prices Admin has currently set (one active price per plan, interval and currency). */
+export async function listActivePlanPrices(): Promise<PlanPrice[]> {
+  const rows = await db
+    .select({ planId: planPrices.planId, interval: planPrices.interval, amountCents: planPrices.amountCents, currency: planPrices.currency })
+    .from(planPrices)
+    .where(eq(planPrices.active, true));
+  return rows.filter((r): r is PlanPrice => isPlanId(r.planId));
 }
 
 async function getPlan(id: PlanId, exec: Tx | typeof db = db): Promise<EntitledPlan> {

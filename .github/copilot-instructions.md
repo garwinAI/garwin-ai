@@ -25,6 +25,7 @@ Assistant API and system health. Full spec: `docs/ROADMAP.md`.
 | --- | --- |
 | `src/app/**` | Routes only: pages, layouts, route handlers. Keep them thin. |
 | `src/app/(auth)` / `src/app/(app)` | Signed-out pages / signed-in workspace (sidebar layout) |
+| `src/app/(marketing)` | Public site: home (hero, About, Plans, FAQ), `/privacy`, `/terms`. Header/footer in `src/components/marketing/`. Plan prices shown come only from `listActivePlanPrices()`. |
 | `src/components/ui/` | Shared accessible primitives (see table below). Use these before writing new markup. |
 | `src/components/shell/` | App frame: responsive sidebar, mobile drawer, nav config (`nav.ts`) |
 | `src/components/` | Feature components (assistant, deactivated-app, logo) |
