@@ -1,4 +1,5 @@
-// Minimal stand-ins for the Resend (email), Twilio (SMS) and GitHub (Update App) APIs, used only by e2e tests.
+// Minimal stand-ins for the Resend (email), Twilio (SMS), GitHub (Update App, Admin Assistant) and
+// Anthropic (Admin Assistant) APIs, used only by e2e tests.
 // The app sends real HTTP requests to them (same code path as production); each email or SMS is
 // appended as a JSON line to MOCK_MAIL_FILE so tests can read verification/reset/invite links.
 import { appendFileSync, writeFileSync } from "node:fs";
@@ -13,18 +14,84 @@ writeFileSync(file, "");
 const DEV_SHA = "d".repeat(40);
 let liveSha = "a".repeat(40);
 
+const TREE_SHA = "f".repeat(40);
+const REPO_FILES = {
+  "README.md": "# Garwin AI\n\nWelcome to Garwin.\n",
+  ".github/copilot-instructions.md": "Keep changes small.\n",
+  "src/lib/auth/session.ts": "export const secret = 1;\n",
+};
+let pendingTree = null;
+let pendingMessage = null;
+let lastDevCommit = null;
+
+// Fake Anthropic Messages API. Scripted like a real tool-use exchange: first it tries a protected
+// file and edits README.md, then (once it has the tool results) it answers in text.
+function anthropic(req, res) {
+  const json = (status, body) => res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify(body));
+  if (!req.headers["x-api-key"] || !req.headers["anthropic-version"]) return json(401, { type: "error", error: { type: "authentication_error" } });
+  let body = "";
+  req.on("data", (c) => (body += c));
+  req.on("end", () => {
+    const { messages, model, tools, system } = JSON.parse(body);
+    if (!model || !Array.isArray(tools) || !system) return json(400, { type: "error", error: { type: "invalid_request_error" } });
+    const last = messages.at(-1);
+    const usage = { input_tokens: 100, output_tokens: 20 };
+    if (Array.isArray(last.content) && last.content.some((b) => b.type === "tool_result")) {
+      const blocked = last.content.find((b) => b.tool_use_id === "toolu_1");
+      return json(200, { content: [{ type: "text", text: `Updated the welcome line. Protected write refused: ${blocked?.is_error === true}.` }], stop_reason: "end_turn", usage });
+    }
+    if (/question only/i.test(String(last.content))) return json(200, { content: [{ type: "text", text: "It is a workspace app." }], stop_reason: "end_turn", usage });
+    json(200, {
+      content: [
+        { type: "text", text: "Making the change." },
+        { type: "tool_use", id: "toolu_1", name: "write_file", input: { path: "src/lib/auth/session.ts", content: "hacked" } },
+        { type: "tool_use", id: "toolu_2", name: "edit_file", input: { path: "README.md", old_text: "Welcome to Garwin.", new_text: "Welcome to the new Garwin." } },
+      ],
+      stop_reason: "tool_use",
+      usage,
+    });
+  });
+}
+
 function github(req, res) {
   const json = (status, body) => res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify(body));
   if (req.method === "POST" && req.url === "/github/reset") {
     liveSha = "a".repeat(40);
+    lastDevCommit = null;
     return json(200, {});
   }
+  if (req.method === "GET" && req.url === "/github/last-dev-commit") return json(200, lastDevCommit ?? {});
   const path = req.url.replace(/^\/repos\/[^/]+\/[^/]+/, "").split("?")[0];
   if (path === req.url.split("?")[0]) return false;
   if (!String(req.headers.authorization ?? "").startsWith("Bearer ")) return json(401, { message: "Bad credentials" });
   if (req.method === "GET" && path === "/compare/live...dev") {
     const ahead = liveSha === DEV_SHA ? 0 : 1;
     return json(200, { ahead_by: ahead, behind_by: 0, commits: ahead ? [{ sha: DEV_SHA, commit: { message: "Add the thing\n\nDetails" } }] : [] });
+  }
+  // --- Admin Assistant: read dev, then write one commit to it
+  if (req.method === "GET" && path === "/git/ref/heads/dev") return json(200, { object: { sha: DEV_SHA } });
+  if (req.method === "GET" && path === `/git/commits/${DEV_SHA}`) return json(200, { sha: DEV_SHA, tree: { sha: TREE_SHA } });
+  if (req.method === "GET" && path === `/git/trees/${TREE_SHA}`) {
+    return json(200, { tree: Object.keys(REPO_FILES).map((p) => ({ path: p, mode: "100644", type: "blob", size: REPO_FILES[p].length })) });
+  }
+  if (req.method === "GET" && path.startsWith("/contents/")) {
+    const file = REPO_FILES[decodeURIComponent(path.slice("/contents/".length))];
+    return file === undefined ? json(404, { message: "Not Found" }) : res.writeHead(200, { "content-type": "text/plain" }).end(file);
+  }
+  if (req.method === "POST" && (path === "/git/trees" || path === "/git/commits")) {
+    let body = "";
+    req.on("data", (c) => (body += c));
+    req.on("end", () => {
+      const parsed = JSON.parse(body);
+      if (path === "/git/trees") pendingTree = parsed.tree;
+      else pendingMessage = parsed.message;
+      json(201, { sha: (path === "/git/trees" ? "b" : "c").repeat(40) });
+    });
+    return true;
+  }
+  if (req.method === "PATCH" && path === "/git/refs/heads/dev") {
+    lastDevCommit = { files: pendingTree, message: pendingMessage };
+    return json(200, { ref: "refs/heads/dev" });
   }
   if (req.method === "GET" && path === "/commits/dev") return res.writeHead(200, { "content-type": "text/plain" }).end(DEV_SHA);
   if (req.method === "PATCH" && path === "/git/refs/heads/live") {
@@ -42,6 +109,7 @@ function github(req, res) {
 }
 
 createServer((req, res) => {
+  if (req.method === "POST" && req.url === "/v1/messages") return anthropic(req, res);
   if (req.url?.startsWith("/repos/") || req.url?.startsWith("/github/")) {
     if (github(req, res) !== false) return;
   }

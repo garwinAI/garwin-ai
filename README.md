@@ -117,6 +117,30 @@ One-time setup:
 2. Vercel → Project → Settings → Environment Variables → add `GITHUB_TOKEN` for **Production and
    Preview**, then redeploy. Without it the button stays greyed out and says so.
 
+## Admin Assistant (edit the site from inside the app)
+
+Admin → **Open Admin Assistant**. Describe a change in plain words; the Assistant (Claude, through
+the Anthropic API) reads the code, edits it and saves the result as **one commit on `dev`**.
+
+- The dev site rebuilds a few minutes later. The live site changes only when you press Update App.
+- It can read the whole repository but cannot run, test or build the code. Check the dev site (and
+  the CI result on GitHub) before publishing.
+- It cannot change: CI workflows, `.env` files, `package.json`/lockfile, the database schema and
+  migrations, sign-in/security/permission code, or its own code. The list is in
+  `src/lib/site-editor.ts`; those changes need a developer.
+- Limits: 20 files per request, 30 requests per hour, about 4 minutes of work per request. A request
+  that doesn't finish saves nothing.
+- Every saved change is in the audit log (`site.edited`) and in the Git history of `dev`.
+- The conversation is not stored; it clears when you leave the page.
+
+One-time setup (in Vercel → Settings → Environment Variables, for **Production and Preview**):
+
+1. `ASSISTANT_API_KEY`: an API key from console.anthropic.com (usage is billed per token by Anthropic).
+2. `GITHUB_TOKEN`: the same token the Update App button uses.
+3. Optional `ASSISTANT_MODEL` (default `claude-sonnet-5-5`).
+
+The Assistant in the sidebar (for all users) is separate and still arrives in Phase 7.
+
 ## Sites and branches on Vercel
 
 | Site | Branch | Vercel environment |

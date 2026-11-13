@@ -39,7 +39,11 @@ const schema = z
     // Integrations added in later phases. Optional until their phase ships.
     STRIPE_SECRET_KEY: optional,
     STRIPE_WEBHOOK_SECRET: optional,
+    // Anthropic API key. Powers the Admin Assistant (edits the site's code on the dev branch).
     ASSISTANT_API_KEY: optional,
+    ASSISTANT_MODEL: z.string().trim().min(1).default("claude-sonnet-5-5"),
+    // Override only for tests.
+    ASSISTANT_API_URL: z.url().default("https://api.anthropic.com/v1/messages"),
 
     // Admin "Update App" button: publishes the dev branch to the live branch through GitHub.
     // A fine-grained token limited to this repository with "Contents: Read and write".

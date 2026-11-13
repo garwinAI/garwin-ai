@@ -94,6 +94,43 @@ test("Admin publishes dev to live with Update App, then the button is greyed out
   await expect(page.getByRole("link", { name: "App update published" }).first()).toBeVisible();
 });
 
+test("Admin Assistant edits a file on dev, and can't touch protected code", async ({ page, request }) => {
+  const email = process.env.ADMIN_EMAIL;
+  const password = process.env.ADMIN_PASSWORD;
+  test.skip(!email || !password, "ADMIN_EMAIL / ADMIN_PASSWORD not set (run npm run db:seed first)");
+  await request.post("http://localhost:3199/github/reset");
+  await logIn(page, email!, password!);
+  await expect(page).toHaveURL(/\/assistant$/);
+
+  await page.goto("/admin");
+  await page.getByRole("link", { name: "Open Admin Assistant" }).click();
+  await expect(page.getByRole("heading", { name: "Admin Assistant", level: 1 })).toBeVisible();
+
+  // A question changes nothing.
+  await page.getByLabel("What would you like to change?").fill("Question only: what is this app?");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByText("It is a workspace app.")).toBeVisible();
+  expect(await (await request.get("http://localhost:3199/github/last-dev-commit")).json()).toEqual({});
+
+  // A change request: the fake model tries a protected file (refused) and edits README.md (saved).
+  await page.getByLabel("What would you like to change?").fill("Make the welcome line say new Garwin");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByText("Protected write refused: true.")).toBeVisible();
+  await expect(page.getByText("Saved to dev")).toBeVisible();
+  await expect(page.getByText("Changed: README.md")).toBeVisible();
+
+  const commit = await (await request.get("http://localhost:3199/github/last-dev-commit")).json();
+  expect(commit.message).toContain("Admin Assistant: Make the welcome line say new Garwin");
+  expect(commit.files).toEqual([{ path: "README.md", mode: "100644", type: "blob", content: "# Garwin AI\n\nWelcome to the new Garwin.\n" }]);
+});
+
+test("members cannot open the Admin Assistant", async ({ page }) => {
+  await signUp(page);
+  await page.goto("/admin/assistant");
+  await expect(page).toHaveURL(/\/assistant$/);
+  await expect(page).not.toHaveURL(/\/admin/);
+});
+
 test("unknown pages show the 404 page", async ({ page }) => {
   await signUp(page);
   await page.goto("/apps/does-not-exist");

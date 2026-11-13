@@ -97,6 +97,11 @@ Publishing: Admin → Update App fast-forwards `live` to `dev` through the GitHu
 (`src/lib/app-update.ts`, `src/server/app-update/github.ts`, `src/server/services/app-update.ts`).
 Never push to `live` directly.
 
+Admin Assistant (`/admin/assistant`): an AI agent that edits this repository on `dev` through the
+GitHub API (`src/lib/site-editor.ts`, `src/server/site-editor/*`, `src/server/services/site-editor.ts`).
+It only stages file changes and writes one commit; it never executes code. Don't loosen the
+protected-path list in `src/lib/site-editor.ts` without asking the owner.
+
 Apps: built-in apps live in `src/lib/apps.ts`; activation and settings go through
 `src/server/services/apps.ts` (host-only changes, Assistant can't be deactivated). Nav items with
 an `appSlug` disappear when that app is deactivated.

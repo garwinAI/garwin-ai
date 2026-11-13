@@ -7,6 +7,7 @@ import { computeHealth, HEALTH_STYLES } from "@/lib/health";
 import { PageBody, PageHeader } from "@/components/ui/page-header";
 import { PlannedBadge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { ButtonLink } from "@/components/ui/button";
 import { pingDatabase } from "@/db";
 import { DEV_BRANCH, LIVE_BRANCH, shortSha, updateBlockedReason } from "@/lib/app-update";
 import { checkForUpdate } from "@/server/services/app-update";
@@ -77,6 +78,14 @@ export default async function AdminPage() {
           <div className="mt-4">
             <UpdateAppButton devSha={available?.devSha ?? null} blockedReason={updateBlockedReason(update)} />
           </div>
+        </section>
+
+        <section aria-labelledby="admin-assistant-title" className="card flex flex-wrap items-center justify-between gap-3 p-5">
+          <div>
+            <h2 id="admin-assistant-title" className="font-semibold">Admin Assistant</h2>
+            <p className="mt-1 text-sm text-neutral-600">Describe a change and the Assistant edits the website&apos;s code on the dev site.</p>
+          </div>
+          <ButtonLink href="/admin/assistant" variant="secondary">Open Admin Assistant</ButtonLink>
         </section>
 
         <div className="grid gap-4 sm:grid-cols-3">
