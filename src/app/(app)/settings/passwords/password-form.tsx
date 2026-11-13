@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { changePassword } from "@/lib/auth/actions";
-import { FormMessage, SubmitButton } from "@/components/form";
+import { TextField } from "@/components/ui/field";
+import { FormMessage, SubmitButton } from "@/components/ui/form";
 
 export function PasswordForm() {
   const [state, action] = useActionState(changePassword, undefined);
@@ -14,18 +15,9 @@ export function PasswordForm() {
   return (
     <form ref={formRef} action={action} className="max-w-md space-y-4">
       <FormMessage state={state} />
-      <div>
-        <label htmlFor="current" className="label">Current password</label>
-        <input id="current" name="current" type="password" autoComplete="current-password" required className="input" />
-      </div>
-      <div>
-        <label htmlFor="next" className="label">New password</label>
-        <input id="next" name="next" type="password" autoComplete="new-password" minLength={10} required className="input" />
-      </div>
-      <div>
-        <label htmlFor="confirm" className="label">Confirm new password</label>
-        <input id="confirm" name="confirm" type="password" autoComplete="new-password" minLength={10} required className="input" />
-      </div>
+      <TextField id="current" name="current" type="password" label="Current password" autoComplete="current-password" required />
+      <TextField id="next" name="next" type="password" label="New password" autoComplete="new-password" minLength={10} required hint="At least 10 characters." />
+      <TextField id="confirm" name="confirm" type="password" label="Confirm new password" autoComplete="new-password" minLength={10} required />
       <SubmitButton pendingText="Updating…">Update password</SubmitButton>
     </form>
   );

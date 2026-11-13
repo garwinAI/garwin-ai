@@ -2,47 +2,60 @@ import "server-only";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { users, type User } from "@/db/schema";
-import { SESSION_COOKIE, SESSION_MAX_AGE, signSession, verifySession } from "./token";
+import { toPublicUser, type PublicUser } from "@/server/services/users";
+import { createSession, SESSION_ABSOLUTE_SEC, validateSessionToken } from "@/server/services/sessions";
+import type { RequestMeta } from "@/server/services/security-events";
+import type { Session } from "@/db/schema";
+import { clearedSessionCookie, sessionCookieAttributes, sessionCookieName } from "./cookie";
+import { resolveMembership } from "@/server/services/entitlements";
 
-export type CurrentUser = Omit<User, "passwordHash">;
+/** The signed-in user plus the workspace (account) this session is viewing, already verified. */
+export type CurrentUser = PublicUser & { accountId: string };
 
-export async function startSession(user: Pick<User, "id" | "role" | "sessionVersion">) {
-  const token = await signSession({ sub: user.id, role: user.role, sv: user.sessionVersion });
+/** Creates a fresh server-side session for the user and sets the cookie. Call after every sign-in. */
+export async function startSession(userId: string, meta: RequestMeta) {
+  const { token, session } = await createSession(userId, meta);
   const jar = await cookies();
-  jar.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE,
-  });
+  jar.set(sessionCookieName(), token, sessionCookieAttributes(SESSION_ABSOLUTE_SEC));
+  return session;
 }
 
-export async function endSession() {
-  const jar = await cookies();
-  jar.delete(SESSION_COOKIE);
+/** Deletes the session cookie. Revoking the DB row is the caller's job (see logOut). */
+export async function clearSessionCookie() {
+  (await cookies()).set(clearedSessionCookie());
 }
 
-/** The signed-in user, verified against the database. Cached per request. */
-export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
-  const jar = await cookies();
-  const claims = await verifySession(jar.get(SESSION_COOKIE)?.value);
-  if (!claims) return null;
-  const [user] = await db.select().from(users).where(eq(users.id, claims.sub));
-  // A changed sessionVersion means the user logged out everywhere or changed their password.
-  if (!user || user.sessionVersion !== claims.sv) return null;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { passwordHash, ...safe } = user;
-  return safe;
+/** The current session and user, verified against the database. Cached per request. */
+export const getCurrentSession = cache(async (): Promise<{ user: CurrentUser; session: Session } | null> => {
+  const token = (await cookies()).get(sessionCookieName())?.value;
+  const row = await validateSessionToken(token);
+  if (!row) return null;
+  // Re-check membership on every request: if the user was removed from the team they were
+  // viewing, fall back to their own workspace immediately.
+  const membership =
+    (row.session.activeAccountId ? await resolveMembership(row.user.id, row.session.activeAccountId) : null) ??
+    (await resolveMembership(row.user.id));
+  if (!membership) return null;
+  return { user: { ...toPublicUser(row.user), accountId: membership.accountId }, session: row.session };
 });
 
+export async function getCurrentUser() {
+  return (await getCurrentSession())?.user ?? null;
+}
+
+/** Use in every page, action and route that needs a signed-in user. */
+export async function requireSession() {
+  const current = await getCurrentSession();
+  if (!current) {
+    // A cookie that is present but no longer valid must be cleared, or proxy.ts would loop.
+    const hasCookie = (await cookies()).has(sessionCookieName());
+    redirect(hasCookie ? "/api/auth/session-expired" : "/login");
+  }
+  return current;
+}
+
 export async function requireUser() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  return user;
+  return (await requireSession()).user;
 }
 
 export async function requireAdmin() {
@@ -51,8 +64,12 @@ export async function requireAdmin() {
   return user;
 }
 
-/** Best-effort client IP. Vercel and most proxies set x-forwarded-for. */
-export async function requestMeta() {
+/**
+ * Best-effort client IP and user agent.
+ * NOTE: x-forwarded-for is trustworthy on Vercel (the platform overwrites it). On any other
+ * host, configure the proxy to overwrite it, or this value can be spoofed by the client.
+ */
+export async function requestMeta(): Promise<RequestMeta> {
   const h = await headers();
   const forwarded = h.get("x-forwarded-for")?.split(",")[0]?.trim();
   return {

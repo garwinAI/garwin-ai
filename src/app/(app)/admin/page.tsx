@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { count, eq, sql } from "drizzle-orm";
-import { db } from "@/db";
-import { users } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/session";
-import { PLANS, PLAN_ORDER } from "@/lib/plans";
+import { env } from "@/lib/env";
+import { getMemberStats } from "@/server/services/admin-stats";
+import { PLAN_ORDER, PLAN_SPEC } from "@/lib/plans";
 import { computeHealth, HEALTH_STYLES } from "@/lib/health";
-import { ComingSoon, PageHeader } from "@/components/page-header";
+import { PageBody, PageHeader } from "@/components/ui/page-header";
+import { PlannedBadge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { pingDatabase } from "@/db";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -23,18 +25,15 @@ const UPCOMING = [
 export default async function AdminPage() {
   await requireAdmin();
 
-  const [{ total }] = await db.select({ total: count() }).from(users);
-  const [{ teamMembers }] = await db.select({ teamMembers: count() }).from(users).where(sql`${users.hostId} is not null`);
-  const [{ developers }] = await db.select({ developers: count() }).from(users).where(eq(users.developerStatus, "approved"));
-  const byPlan = await db.select({ plan: users.plan, n: count() }).from(users).groupBy(users.plan);
-  const planCount = Object.fromEntries(byPlan.map((r) => [r.plan, r.n]));
+  const { total, teamMembers, developers, perPlan: planCount } = await getMemberStats();
+  const config = env();
 
   const health = computeHealth({
-    online: true,
+    online: await pingDatabase(),
     critical: false,
     significantIssue: false,
-    paymentsConfigured: Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET),
-    assistantConfigured: Boolean(process.env.ASSISTANT_API_KEY),
+    paymentsConfigured: Boolean(config.STRIPE_SECRET_KEY && config.STRIPE_WEBHOOK_SECRET),
+    assistantConfigured: Boolean(config.ASSISTANT_API_KEY),
     oldestOpenTicketHours: null, // support tickets arrive in Phase 6
   });
   const style = HEALTH_STYLES[health.level];
@@ -42,11 +41,11 @@ export default async function AdminPage() {
   return (
     <>
       <PageHeader title="Admin" description="Run Garwin AI: members, plans, marketplace, support and system health." />
-      <div className="space-y-6 p-8">
+      <PageBody>
         <section className={`flex flex-wrap items-start justify-between gap-4 rounded-xl border p-5 ${style.badge}`}>
           <div>
             <p className="flex items-center gap-2 font-semibold">
-              <span className={`h-3 w-3 rounded-full ${style.dot}`} /> System health: {style.label}
+              <span className={`h-3 w-3 rounded-full ${style.dot}`} aria-hidden="true" /> System health: {style.label}
             </p>
             {health.reasons.length > 0 ? (
               <ul className="mt-2 list-inside list-disc text-sm">
@@ -64,10 +63,10 @@ export default async function AdminPage() {
             { label: "Team members", value: teamMembers },
             { label: "Approved developers", value: developers },
           ].map((s) => (
-            <div key={s.label} className="card p-5">
+            <Card key={s.label} className="p-5">
               <p className="text-sm text-neutral-500">{s.label}</p>
               <p className="mt-1 text-2xl font-semibold">{s.value}</p>
-            </div>
+            </Card>
           ))}
         </div>
 
@@ -76,7 +75,7 @@ export default async function AdminPage() {
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {PLAN_ORDER.map((id) => (
               <div key={id} className="rounded-lg bg-neutral-50 p-3">
-                <p className="text-xs text-neutral-500">{PLANS[id].name}</p>
+                <p className="text-xs text-neutral-500">{PLAN_SPEC[id].name}</p>
                 <p className="text-lg font-semibold">{planCount[id] ?? 0}</p>
               </div>
             ))}
@@ -88,12 +87,12 @@ export default async function AdminPage() {
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {UPCOMING.map((t) => (
               <li key={t.name} className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2.5 text-sm">
-                {t.name} <ComingSoon phase={t.phase} />
+                {t.name} <PlannedBadge phase={t.phase} />
               </li>
             ))}
           </ul>
         </section>
-      </div>
+      </PageBody>
     </>
   );
 }

@@ -1,21 +1,32 @@
 import type { Metadata } from "next";
 import { CreditCard } from "lucide-react";
-import { ComingSoon } from "@/components/page-header";
-import { Section } from "../section";
+import { CardSection } from "@/components/ui/card";
+import { PlannedBadge } from "@/components/ui/badge";
+import { requireUser } from "@/lib/auth/session";
+import { getEntitlements } from "@/server/services/entitlements";
 
 export const metadata: Metadata = { title: "Cards" };
 
-export default function CardsSettings() {
+export default async function CardsSettings() {
+  const ent = await getEntitlements(await requireUser());
+  if (!ent.canManageBilling) {
+    return (
+      <CardSection id="cards" title="Payment cards">
+        <p className="text-sm text-neutral-600">Only your account host can manage payment cards for this workspace.</p>
+      </CardSection>
+    );
+  }
   return (
-    <Section title="Payment cards" description="Cards are stored securely by Stripe. Garwin AI never sees full card numbers.">
+    <CardSection
+      id="cards"
+      title="Payment cards"
+      description="Cards will be stored by Stripe. Garwin AI never sees or stores full card numbers."
+      actions={<PlannedBadge phase={2} />}
+    >
       <div className="flex flex-col items-center py-6 text-center">
-        <CreditCard className="h-8 w-8 text-neutral-300" />
-        <p className="mt-3 text-sm text-neutral-500">No cards on file.</p>
-        <div className="mt-4 flex items-center gap-3">
-          <button className="btn-primary" disabled>Add card</button>
-          <ComingSoon phase={2} />
-        </div>
+        <CreditCard className="h-8 w-8 text-neutral-300" aria-hidden="true" />
+        <p className="mt-3 text-sm text-neutral-500">Adding and managing cards arrives with billing.</p>
       </div>
-    </Section>
+    </CardSection>
   );
 }

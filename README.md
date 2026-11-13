@@ -2,84 +2,136 @@
 
 AI-powered workspace with an AppZone marketplace for apps, widgets and themes.
 
-**Stack:** Next.js 16 (App Router) · TypeScript · Tailwind CSS 4 · Postgres + Drizzle ORM · signed-cookie sessions (jose + bcrypt)
+**Stack:** Next.js 16 · React 19 · TypeScript · Tailwind CSS 4 · PostgreSQL + Drizzle ORM · Vitest + Playwright · npm
 
-## Run it locally (Windows / macOS / Linux)
+- Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- Spec and roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+- Data model and entitlement rules: [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md)
+- Rules for AI assistants (Copilot etc.): [`.github/copilot-instructions.md`](.github/copilot-instructions.md)
 
-1. Install [Node.js 22+](https://nodejs.org) and have a Postgres database (a free [Neon](https://neon.tech) database works; no local install needed).
-   With Docker installed, `docker compose up -d` starts a local one that matches the example `DATABASE_URL`.
-2. Install packages:
-   ```bash
-   npm install
-   ```
-3. Copy `.env.example` to **both** `.env` and `.env.local`, then fill in `DATABASE_URL`, `AUTH_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
-4. Create the tables and your Admin account:
-   ```bash
-   npm run db:migrate
-   npm run db:seed
-   ```
-5. Start it:
-   ```bash
-   npm run dev
-   ```
-   Open http://localhost:3000.
+## Run it locally
 
-## Deploy to dev.garwinai.com (Vercel)
+You need **Node.js 22** (see `.nvmrc`) and a **PostgreSQL** database. Easiest options:
+- Docker Desktop installed: `docker compose up -d` starts one locally.
+- No Docker: create a free database at [neon.tech](https://neon.tech) and copy its connection string.
 
-1. On vercel.com: **Add New → Project → import `garwinAI/garwin-ai`**. Set the production branch to `main`.
-2. Add environment variables: `DATABASE_URL`, `AUTH_SECRET` (32+ random characters, a new value, not your local one).
-3. Run `npm run db:migrate` and `npm run db:seed` once against that database (from your computer with `.env` pointing at it).
-4. In Vercel → Project → **Settings → Domains**, add `dev.garwinai.com`. Copy the CNAME target it shows.
-5. In Namecheap → Domain List → garwinai.com → **Advanced DNS**, add **CNAME** · Host `dev` · Value = Vercel's target.
+```bash
+# 1. Install packages
+npm install
 
-## Branches
+# 2. Create your env file, then edit it (DATABASE_URL, AUTH_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD)
+cp .env.example .env            # Windows PowerShell: Copy-Item .env.example .env
 
-- `main` is the live site. Only tested changes go here.
-- `dev` is work in progress. Vercel builds a private preview link for every push to it.
+# 3. Generate a value for AUTH_SECRET and paste it into .env
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
-To publish: merge `dev` into `main`.
+# 4. Create the tables and your Admin account
+npm run db:migrate
+npm run db:seed
 
-## Scripts
+# 5. Start the app
+npm run dev
+```
+
+Open http://localhost:3000, then sign up, or log in with your `ADMIN_EMAIL`.
+Without `RESEND_API_KEY`, verification and password-reset emails are printed in the terminal
+running `npm run dev`; copy the link from there.
+Check it's healthy at http://localhost:3000/api/health.
+
+If anything in `.env` is missing or invalid, the server stops at startup and lists exactly which variable is wrong.
+
+## Commands
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Dev server |
-| `npm run build` | Production build |
-| `npm run check` | Lint + typecheck (run before every commit) |
-| `npm run lint` / `npm run typecheck` | The two checks on their own |
+| `npm run dev` | Start the dev server on port 3000 |
+| `npm run build` / `npm start` | Production build / run it |
+| `npm run check` | Lint + typecheck + unit tests (run before every commit) |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript |
+| `npm test` | Unit tests (Vitest) |
+| `npm run test:watch` | Unit tests in watch mode |
+| `npm run test:integration` | Auth/session/rate-limit tests against the database in `DATABASE_URL` |
+| `npm run test:e2e` | Browser tests (Playwright); needs the database and `db:seed`. Uses a local fake Resend server, never real email |
 | `npm run db:generate` | Create a migration after editing `src/db/schema.ts` |
-| `npm run db:migrate` | Apply migrations |
-| `npm run db:seed` | Create / promote the Admin from `ADMIN_EMAIL` |
+| `npm run db:migrate` | Apply migrations to `DATABASE_URL` |
+| `npm run db:seed` | Create or promote the Admin from `ADMIN_EMAIL` / `ADMIN_PASSWORD` |
+| `npm run db:studio` | Browse the database in Drizzle Studio |
+
+First time running e2e tests: `npx playwright install chromium`.
 
 ## Project layout
 
 ```
 src/
-  app/(auth)/        login, signup
-  app/(app)/         signed-in workspace: assistant, messages, calendar, apps, appzone,
-                     contacts, storage, settings/*, admin
-  components/        shell (sidebar), assistant (chat + floating button), shared UI
-  db/                Drizzle schema, migrate + seed scripts
-  lib/auth/          sessions, server actions (sign up/in/out, password, profile)
-  lib/plans.ts       plan limits from the spec (prices are Admin-controlled, Phase 2)
-  lib/health.ts      Admin health rules (green / light green / yellow / red)
-  proxy.ts           route gate (Next 16's replacement for middleware)
-drizzle/             SQL migrations
+  app/                 routes only
+    (auth)/            login, signup
+    (app)/             signed-in workspace (sidebar layout): assistant, messages, calendar,
+                       apps, appzone, contacts, storage, settings/*, admin
+    api/health/        public health check
+  components/ui/       accessible building blocks (Button, TextField, CardSection, Drawer, NavTabs...)
+  components/shell/    responsive sidebar + mobile drawer, navigation config
+  components/          feature components (assistant chat + floating button, ...)
+  server/services/     ALL database access (users, apps, login events, entitlements, assistant, admin stats)
+  lib/                 env, logger, errors, validation, actions, plans, entitlements, health, auth/
+  db/schema/           Drizzle schema, one file per domain
+  db/                  client, migrate + seed scripts
+  proxy.ts             route pre-check (Next 16's replacement for middleware)
+  instrumentation.ts   validates env at server start
+drizzle/               SQL migrations (generated; never edit by hand)
+tests/unit/            Vitest
+tests/e2e/             Playwright
+docs/                  architecture, roadmap
+.github/               CI workflow, PR template, Copilot instructions
 ```
 
-## Build phases
+## Configuration and secrets
 
-1. ✅ **Foundation:** shell, design, navigation, floating Assistant, auth, roles, IP history, Admin health
-2. Plans & billing: Admin-set prices, Stripe Checkout (monthly/yearly), idempotent signed webhooks
-3. Core apps: Storage (shared quota, team permissions, mark-for-deletion), Calendar, Messages, Contacts
-4. Workspace: drag/resize widgets and themes, Pages menu
-5. AppZone: marketplace, download limits, developer applications, submissions, upload fees, 15% commission
-6. Admin: members, support tickets, analytics, audited time-limited support access
-7. Assistant: AI API integration
+- Every variable is declared in `src/lib/env.ts` and listed with placeholders in `.env.example`.
+- Real values go in `.env` locally and in Vercel → Project → Settings → Environment Variables in production.
+- `.env` files are git-ignored. Never commit secrets or paste them into AI chats.
 
-## Security rules (from the spec, non-negotiable)
+## Branches
 
-- Never execute uploaded developer code on the main server. AppZone items run sandboxed on a separate origin.
-- Stripe webhooks are the payment source of truth: verify signatures, process idempotently.
-- Admin support access must be visible, reason-based, user-approved, time-limited, least-privilege and audited. No silent impersonation.
-- Never commit secrets. `.env*` files are git-ignored.
+- `live` is the live site. Only tested, approved changes go here.
+- `dev` is work in progress. Vercel builds a private preview link for every push to it.
+
+To publish: merge `dev` into `live`. This repo is the only copy of the app.
+
+## Deploy to dev.garwinai.com (Vercel)
+
+1. vercel.com → **Add New → Project** → import `garwinAI/garwin-ai`, production branch `live`.
+2. Add environment variables: `DATABASE_URL` (the **pooled** connection string), `AUTH_SECRET` (a new
+   value, not your local one), `APP_URL=https://dev.garwinai.com`, `RESEND_API_KEY`, `EMAIL_FROM`.
+3. Run `npm run db:migrate` and `npm run db:seed` once against that database.
+4. Vercel → Settings → **Domains** → add `dev.garwinai.com`, and copy the CNAME target.
+5. Namecheap → Domain List → garwinai.com → **Advanced DNS** → add **CNAME**, Host `dev`, Value = Vercel's target.
+6. Check `https://dev.garwinai.com/api/health` returns `"status":"ok"`.
+
+## Set up email (Resend)
+
+Password reset and email verification need a real email provider in production; the app won't
+start without one.
+
+1. Create an account at [resend.com](https://resend.com) → **Domains → Add domain** → `garwinai.com`.
+2. Resend shows several DNS records (SPF/DKIM, usually TXT and MX). Add each one in Namecheap →
+   Domain List → garwinai.com → **Advanced DNS** exactly as shown, then click **Verify** in Resend.
+3. Resend → **API Keys → Create** (permission: *Sending access*, domain: garwinai.com).
+4. In Vercel add `RESEND_API_KEY` (the key) and `EMAIL_FROM=Garwin AI <no-reply@garwinai.com>`.
+   Never paste the key into code, chats or commits.
+
+## Set up SMS invitations (Twilio)
+
+Optional. Without it, hosts can still invite by email.
+
+1. Create an account at [twilio.com](https://www.twilio.com) and buy a phone number with SMS.
+2. For US recipients, complete **A2P 10DLC** registration (Messaging → Regulatory Compliance);
+   unregistered US traffic gets blocked by carriers.
+3. In Vercel add `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_FROM` (the number in
+   `+1...` form, or a Messaging Service SID starting with `MG`). Never commit or share the token.
+
+## Working with Copilot
+
+Use Agent mode with one task at a time. Copilot automatically reads
+`.github/copilot-instructions.md`. After each change: review the diff, run `npm run check`
+(and `npm run test:e2e` for UI changes), then commit.

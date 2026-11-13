@@ -2,22 +2,16 @@
 
 import { useActionState } from "react";
 import { updateProfile } from "@/lib/auth/actions";
-import { FormMessage, SubmitButton } from "@/components/form";
+import { TextField } from "@/components/ui/field";
+import { FormMessage, SubmitButton } from "@/components/ui/form";
 
 export function ProfileForm({ name, email }: { name: string; email: string }) {
   const [state, action] = useActionState(updateProfile, undefined);
   return (
     <form action={action} className="max-w-md space-y-4">
       <FormMessage state={state} />
-      <div>
-        <label htmlFor="name" className="label">Name</label>
-        <input id="name" name="name" defaultValue={name} required className="input" />
-      </div>
-      <div>
-        <label htmlFor="email" className="label">Email</label>
-        <input id="email" value={email} disabled className="input bg-neutral-50 text-neutral-500" />
-        <p className="mt-1 text-xs text-neutral-500">Email changes with verification are coming later.</p>
-      </div>
+      <TextField id="name" name="name" label="Name" defaultValue={name} autoComplete="name" required maxLength={80} />
+      <TextField id="email" label="Email" value={email} disabled readOnly hint="Changing your email (with verification) is coming later." />
       <SubmitButton pendingText="Saving…">Save changes</SubmitButton>
     </form>
   );

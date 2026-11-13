@@ -5,15 +5,29 @@ import * as schema from "./schema";
 
 const globalForDb = globalThis as unknown as { garwinPool?: Pool };
 
-function createPool() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new Error("DATABASE_URL is not set");
-  return new Pool({ connectionString, max: 5 });
-}
-
-// Reuse one pool across hot reloads in development.
-const pool = globalForDb.garwinPool ?? createPool();
+// The pool connects lazily on first query, so importing this module never touches the network
+// (keeps `next build` working without a database). DATABASE_URL is validated at server start
+// by src/instrumentation.ts. In serverless production, use your provider's POOLED connection string.
+const pool =
+  globalForDb.garwinPool ??
+  new Pool({ connectionString: process.env.DATABASE_URL, max: process.env.NODE_ENV === "production" ? 3 : 5 });
 if (process.env.NODE_ENV !== "production") globalForDb.garwinPool = pool;
 
 export const db = drizzle(pool, { schema });
 export { schema };
+
+/** Lightweight connectivity check used by /api/health. */
+export async function pingDatabase(): Promise<boolean> {
+  try {
+    await pool.query("select 1");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Close the pool (scripts and tests only). */
+export async function closeDatabase() {
+  await pool.end();
+  globalForDb.garwinPool = undefined;
+}
