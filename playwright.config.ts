@@ -55,6 +55,8 @@ export default defineConfig({
         TWILIO_FROM: "+15005550006",
         TWILIO_API_BASE: `http://localhost:${MOCK_RESEND_PORT}`,
         MAIL_LOG_FILE: "",
+        GITHUB_TOKEN: "github_test_not_a_real_token",
+        GITHUB_API_URL: `http://localhost:${MOCK_RESEND_PORT}`,
       },
     },
   ],

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { Bell, LogOut } from "lucide-react";
 import { logOut } from "@/lib/auth/actions";
 import { cn } from "@/components/ui/cn";
 import { isActivePath, type NavItem } from "./nav";
@@ -13,11 +13,14 @@ export type ShellUser = { name: string; email: string; planName: string };
 export function SidebarNav({
   items,
   user,
+  unread = 0,
   collapsed = false,
   onNavigate,
 }: {
   items: NavItem[];
   user: ShellUser;
+  /** Unread notification count shown on the Notifications link */
+  unread?: number;
   collapsed?: boolean;
   onNavigate?: () => void;
 }) {
@@ -54,6 +57,26 @@ export function SidebarNav({
       </nav>
 
       <div className="border-t border-neutral-200 p-2">
+        <Link
+          href="/notifications"
+          onClick={onNavigate}
+          title={collapsed ? "Notifications" : undefined}
+          aria-current={isActivePath(pathname, "/notifications") ? "page" : undefined}
+          className={cn(
+            "relative flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-brand-600",
+            collapsed && "justify-center",
+            isActivePath(pathname, "/notifications") && "bg-neutral-100 font-medium text-neutral-900",
+          )}
+        >
+          <Bell className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+          <span className={collapsed ? "sr-only" : "flex-1 truncate"}>Notifications</span>
+          {unread > 0 && (
+            <span className={cn("rounded-full bg-accent-500 text-xs font-semibold text-neutral-900", collapsed ? "absolute right-2 top-1.5 h-2 w-2" : "px-1.5 py-0.5")}>
+              <span aria-hidden="true">{collapsed ? "" : unread > 99 ? "99+" : unread}</span>
+              <span className="sr-only">({unread} unread)</span>
+            </span>
+          )}
+        </Link>
         {!collapsed && (
           <div className="mb-1 px-2 py-1.5">
             <p className="truncate text-sm font-medium text-neutral-900">{user.name}</p>

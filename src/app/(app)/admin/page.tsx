@@ -8,6 +8,9 @@ import { PageBody, PageHeader } from "@/components/ui/page-header";
 import { PlannedBadge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { pingDatabase } from "@/db";
+import { DEV_BRANCH, LIVE_BRANCH, shortSha, updateBlockedReason } from "@/lib/app-update";
+import { checkForUpdate } from "@/server/services/app-update";
+import { UpdateAppButton } from "./update-app";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -27,6 +30,8 @@ export default async function AdminPage() {
 
   const { total, teamMembers, developers, perPlan: planCount } = await getMemberStats();
   const config = env();
+  const update = await checkForUpdate();
+  const available = update.state === "update_available" ? update : null;
 
   const health = computeHealth({
     online: await pingDatabase(),
@@ -54,6 +59,23 @@ export default async function AdminPage() {
             ) : (
               <p className="mt-1 text-sm">All systems normal.</p>
             )}
+          </div>
+        </section>
+
+        <section id="app-update" aria-labelledby="app-update-title" className="card scroll-mt-20 p-5">
+          <h2 id="app-update-title" className="font-semibold">App update</h2>
+          <p className="mt-1 text-sm text-neutral-600">
+            Copies what is on the <code>{DEV_BRANCH}</code> branch (the dev site) to the <code>{LIVE_BRANCH}</code> branch (the live site).
+            {available && ` ${available.count} change${available.count === 1 ? "" : "s"} waiting, version ${shortSha(available.devSha)}.`}
+          </p>
+          {available && available.changes.length > 0 && (
+            <ul className="mt-3 list-inside list-disc space-y-0.5 text-sm text-neutral-700">
+              {available.changes.map((c) => <li key={c.sha} className="break-words">{c.summary}</li>)}
+              {available.count > available.changes.length && <li className="list-none text-neutral-500">and {available.count - available.changes.length} more</li>}
+            </ul>
+          )}
+          <div className="mt-4">
+            <UpdateAppButton devSha={available?.devSha ?? null} blockedReason={updateBlockedReason(update)} />
           </div>
         </section>
 

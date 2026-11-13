@@ -25,6 +25,7 @@ export const LIMITS = {
   resetSubmitPerIp: { limit: 10, windowSec: 15 * 60 },
   verifyResendPerUser: { limit: 3, windowSec: 60 * 60 },
   passwordChangePerUser: { limit: 5, windowSec: 15 * 60 },
+  appUpdatePerUser: { limit: 10, windowSec: 60 * 60 },
 } satisfies Record<string, Limit>;
 
 export type RateResult = { allowed: boolean; count: number; retryAfterSec: number };

@@ -40,6 +40,13 @@ const schema = z
     STRIPE_SECRET_KEY: optional,
     STRIPE_WEBHOOK_SECRET: optional,
     ASSISTANT_API_KEY: optional,
+
+    // Admin "Update App" button: publishes the dev branch to the live branch through GitHub.
+    // A fine-grained token limited to this repository with "Contents: Read and write".
+    GITHUB_TOKEN: optional,
+    GITHUB_REPO: z.string().trim().regex(/^[\w.-]+\/[\w.-]+$/, "GITHUB_REPO must look like owner/name").default("garwinAI/garwin-ai"),
+    // Override only for tests.
+    GITHUB_API_URL: z.url().default("https://api.github.com"),
   })
   .transform((e) => ({ ...e, EMAIL_TRANSPORT: e.EMAIL_TRANSPORT ?? (e.RESEND_API_KEY ? "resend" : "console") }))
   .superRefine((e, ctx) => {

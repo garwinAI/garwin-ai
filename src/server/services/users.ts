@@ -18,6 +18,12 @@ export async function findUserById(id: string) {
   return user ?? null;
 }
 
+/** Ids of every Admin (for system notifications). */
+export async function listAdminIds() {
+  const rows = await db.select({ id: users.id }).from(users).where(eq(users.role, "admin"));
+  return rows.map((r) => r.id);
+}
+
 export async function findUserByEmail(email: string) {
   const [user] = await db.select().from(users).where(eq(users.email, email));
   return user ?? null;

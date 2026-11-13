@@ -23,6 +23,7 @@ export function AppShell({
   workspaces,
   currentAccountId,
   user,
+  unreadNotifications,
   initialCollapsed,
   children,
 }: {
@@ -33,6 +34,7 @@ export function AppShell({
   workspaces: Workspace[];
   currentAccountId: string;
   user: ShellUser;
+  unreadNotifications: number;
   initialCollapsed: boolean;
   children: ReactNode;
 }) {
@@ -68,7 +70,7 @@ export function AppShell({
           <Logo />
         </div>
         {switcher}
-        <SidebarNav items={items} user={user} onNavigate={() => setDrawerOpen(false)} />
+        <SidebarNav items={items} user={user} unread={unreadNotifications} onNavigate={() => setDrawerOpen(false)} />
       </Drawer>
 
       {/* Desktop sidebar */}
@@ -91,7 +93,7 @@ export function AppShell({
           </div>
         )}
         {!collapsed && switcher}
-        <SidebarNav items={items} user={user} collapsed={collapsed} />
+        <SidebarNav items={items} user={user} unread={unreadNotifications} collapsed={collapsed} />
       </aside>
 
       <main id="main" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">

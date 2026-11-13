@@ -93,6 +93,10 @@ Assistant API and system health. Full spec: `docs/ROADMAP.md`.
 | `EmptyState` | Empty lists and not-yet-built areas |
 | `LocalTime` | Timestamps in the viewer's time zone |
 
+Publishing: Admin → Update App fast-forwards `live` to `dev` through the GitHub API
+(`src/lib/app-update.ts`, `src/server/app-update/github.ts`, `src/server/services/app-update.ts`).
+Never push to `live` directly.
+
 Apps: built-in apps live in `src/lib/apps.ts`; activation and settings go through
 `src/server/services/apps.ts` (host-only changes, Assistant can't be deactivated). Nav items with
 an `appSlug` disappear when that app is deactivated.

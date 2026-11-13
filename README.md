@@ -94,11 +94,45 @@ docs/                  architecture, roadmap
 ## Branches
 
 - `live` is the live site. Only tested, approved changes go here.
-- `dev` is work in progress. Vercel builds a private preview link for every push to it.
+- `dev` is work in progress. Every push to it is deployed to dev.garwinai.com.
 
-To publish: merge `dev` into `live`. This repo is the only copy of the app.
+To publish: press **Update App** on the Admin page (see below). This repo is the only copy of the app.
 
-## Deploy to dev.garwinai.com (Vercel)
+## Update App (publish dev to live)
+
+Admin → **App update** compares the `dev` branch with the `live` branch on GitHub.
+
+- When dev has changes that live doesn't, the **Update App** button is active and lists them.
+  Pressing it moves `live` forward to exactly the dev version you were shown (never a force-push);
+  Vercel then builds and deploys the live site.
+- When live already matches dev, the button is greyed out.
+- Admins get an "App update ready to publish" notification when dev moves ahead, and an "App update
+  published" notification after each update. Notifications are under **Notifications** in the sidebar.
+- Every update is written to the audit log (`app.updated`).
+
+One-time setup:
+
+1. GitHub → Settings → Developer settings → **Fine-grained tokens** → Generate. Repository access:
+   only `garwinAI/garwin-ai`. Permissions: **Contents: Read and write**. Copy the token.
+2. Vercel → Project → Settings → Environment Variables → add `GITHUB_TOKEN` for **Production and
+   Preview**, then redeploy. Without it the button stays greyed out and says so.
+
+## Sites and branches on Vercel
+
+| Site | Branch | Vercel environment |
+| --- | --- | --- |
+| garwinai.com | `live` | Production |
+| dev.garwinai.com | `dev` | Preview (domain assigned to the `dev` branch) |
+
+- Vercel → Settings → Domains: add `garwinai.com` (Production). Edit `dev.garwinai.com` and assign it
+  to the Git branch `dev`.
+- Environment variables must exist for **Preview** as well as Production. Set `APP_URL` per
+  environment (`https://garwinai.com` for Production, `https://dev.garwinai.com` for Preview).
+- Give dev its **own database** (a Neon branch) and set that `DATABASE_URL` for Preview, so testing
+  never touches live data. Then add `MIGRATE_ON_BUILD=1` for Preview so dev deploys apply migrations
+  too. Never set `MIGRATE_ON_BUILD` on an environment that shares the live database.
+
+## First deploy (Vercel)
 
 1. vercel.com → **Add New → Project** → import `garwinAI/garwin-ai`, production branch `live`.
 2. Add environment variables: `DATABASE_URL` (the **pooled** connection string), `AUTH_SECRET` (a new

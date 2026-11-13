@@ -66,6 +66,34 @@ test("Admin sees system health", async ({ page }) => {
   await expect(page.getByText(/System health:/)).toBeVisible();
 });
 
+test("Admin publishes dev to live with Update App, then the button is greyed out", async ({ page, request }) => {
+  const email = process.env.ADMIN_EMAIL;
+  const password = process.env.ADMIN_PASSWORD;
+  test.skip(!email || !password, "ADMIN_EMAIL / ADMIN_PASSWORD not set (run npm run db:seed first)");
+  // The fake GitHub (tests/support/mock-providers.mjs) starts with dev one change ahead of live.
+  await request.post("http://localhost:3199/github/reset");
+  await logIn(page, email!, password!);
+  await expect(page).toHaveURL(/\/assistant$/);
+
+  await page.goto("/notifications");
+  await expect(page.getByRole("link", { name: "App update ready to publish" }).first()).toBeVisible();
+
+  await page.goto("/admin");
+  const button = page.getByRole("button", { name: "Update App" });
+  await expect(page.getByText("Add the thing")).toBeVisible();
+  await expect(button).toBeEnabled();
+  await button.click();
+  await expect(page.getByText(/Update sent to the live site/)).toBeVisible();
+  await expect(button).toBeDisabled();
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Update App" })).toBeDisabled();
+  await expect(page.getByText("The live site already matches dev.")).toBeVisible();
+
+  await page.goto("/notifications");
+  await expect(page.getByRole("link", { name: "App update published" }).first()).toBeVisible();
+});
+
 test("unknown pages show the 404 page", async ({ page }) => {
   await signUp(page);
   await page.goto("/apps/does-not-exist");

@@ -6,9 +6,12 @@ import { execSync } from "node:child_process";
 
 const run = (cmd) => execSync(cmd, { stdio: "inherit" });
 
-if (process.env.VERCEL_ENV === "production") {
+// MIGRATE_ON_BUILD=1 opts a non-production environment in (set it only for the dev branch, and
+// only when that branch has its OWN database, never the live one).
+const isProduction = process.env.VERCEL_ENV === "production";
+if (isProduction || process.env.MIGRATE_ON_BUILD === "1") {
   if (!process.env.DATABASE_URL) {
-    console.error("DATABASE_URL is not set for Production in Vercel → Settings → Environment Variables.");
+    console.error("DATABASE_URL is not set for this environment in Vercel → Settings → Environment Variables.");
     process.exit(1);
   }
   run("npm run db:migrate");
