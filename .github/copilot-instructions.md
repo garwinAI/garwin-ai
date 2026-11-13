@@ -30,7 +30,7 @@ Assistant API and system health. Full spec: `docs/ROADMAP.md`.
 | `src/components/shell/` | App frame: responsive sidebar, mobile drawer, nav config (`nav.ts`) |
 | `src/components/` | Feature components (assistant, deactivated-app, logo) |
 | `src/server/services/` | **All database access.** One file per domain (`users.ts`, ...). Starts with `import "server-only"`. |
-| `src/lib/` | Shared logic with no DB access: `env`, `logger`, `errors`, `validation`, `actions`, `plans`, `entitlements`, `health` |
+| `src/lib/` | Shared logic with no DB access: `env`, `logger`, `errors`, `validation`, `actions`, `plans`, `entitlements`, `billing`, `health` |
 | `src/lib/auth/` | Sessions, tokens and auth server actions |
 | `src/db/schema/` | Drizzle schema, one file per domain (auth, accounts, billing, apps, storage, appzone, messaging, support, audit) |
 | `src/db/` | Client, migrate and seed scripts |
@@ -102,6 +102,12 @@ Admin Assistant (`/admin/assistant`): an AI agent that edits this repository on 
 GitHub API (`src/lib/site-editor.ts`, `src/server/site-editor/*`, `src/server/services/site-editor.ts`).
 It only stages file changes and writes one commit; it never executes code. Don't loosen the
 protected-path list in `src/lib/site-editor.ts` without asking the owner.
+
+Billing: pure rules in `src/lib/billing.ts`, everything else in `src/server/services/billing.ts`,
+Stripe calls only through `src/server/stripe/client.ts` (fetch, no SDK). The `subscriptions` row
+decides the plan and is written only by `syncSubscription()` from an object fetched from Stripe.
+Never set a plan from form input, a redirect URL, or the body of a webhook event: re-fetch from
+Stripe. Tests use the fake Stripe in `tests/support/fake-stripe.mjs`.
 
 Apps: built-in apps live in `src/lib/apps.ts`; activation and settings go through
 `src/server/services/apps.ts` (host-only changes, Assistant can't be deactivated). Nav items with

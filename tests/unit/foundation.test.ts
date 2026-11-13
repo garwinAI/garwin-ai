@@ -82,6 +82,18 @@ describe("env", () => {
     expect(() => env()).toThrowError(/AUTH_SECRET/);
   });
 
+  it("needs both Stripe keys or neither", () => {
+    vi.stubEnv("DATABASE_URL", "postgres://x");
+    vi.stubEnv("AUTH_SECRET", "x".repeat(40));
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_not_a_real_key");
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
+    resetEnvCache();
+    expect(() => env()).toThrowError(/STRIPE_WEBHOOK_SECRET/);
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_not_a_real_secret");
+    resetEnvCache();
+    expect(env().STRIPE_API_URL).toBe("https://api.stripe.com");
+  });
+
   it("treats blank optional integrations as unset", () => {
     vi.stubEnv("DATABASE_URL", "postgres://x");
     vi.stubEnv("AUTH_SECRET", "x".repeat(40));

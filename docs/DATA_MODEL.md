@@ -75,7 +75,10 @@ rejects `UPDATE`, `DELETE` and `TRUNCATE`. `stripe_events` and `rate_limits` sta
 | Item price is free or at least $0.99 | `appzone_items_price_valid` |
 | Plan limits match the spec | DB rows seeded by migration `0004`; test compares them with `PLAN_SPEC` |
 | Prices are Admin-controlled with history | `plan_prices`: old prices deactivated, one active per plan+interval+currency |
-| Stripe is the payment source of truth; webhooks idempotent | `stripe_events.id` primary key; `payments` must reference a Stripe object |
+| Stripe is the payment source of truth; webhooks idempotent | `stripe_events.id` primary key; `payments` must reference a Stripe object; `syncSubscription()` only accepts objects fetched from Stripe |
+| A Stripe subscription belongs to the account whose `accounts.stripe_customer_id` matches its customer | `syncSubscription()` never trusts metadata or client input for the account |
+| A paid Stripe subscription replaces whatever else is current for the account | `syncSubscription()` cancels other current rows inside one transaction (keeps `subscriptions_one_current_idx` true) |
+| A late "payment failed" event can't undo a paid invoice | `recordInvoice()` conditional upsert on `payments.stripe_invoice_id` |
 | Support access ≤ 24h, with reason and scopes | `support_access_max_24h`, `support_access_reason_length`, `support_access_grant_scopes` |
 | Unique file/folder names per folder (case-insensitive); folders have no bytes | `storage_objects_unique_name_idx`, `storage_objects_kind_fields` |
 

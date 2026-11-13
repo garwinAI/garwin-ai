@@ -69,11 +69,13 @@ src/
     (app)/             signed-in workspace (sidebar layout): assistant, messages, calendar,
                        apps, appzone, contacts, storage, settings/*, admin
     api/health/        public health check
+    api/stripe/webhook Stripe -> Garwin AI (public, authenticated by signature)
   components/ui/       accessible building blocks (Button, TextField, CardSection, Drawer, NavTabs...)
   components/shell/    responsive sidebar + mobile drawer, navigation config
   components/          feature components (assistant chat + floating button, ...)
-  server/services/     ALL database access (users, apps, login events, entitlements, assistant, admin stats)
-  lib/                 env, logger, errors, validation, actions, plans, entitlements, health, auth/
+  server/services/     ALL database access (users, apps, login events, entitlements, billing, assistant, admin stats)
+  server/stripe/       Stripe REST client + webhook signature check (no SDK)
+  lib/                 env, logger, errors, validation, actions, plans, entitlements, billing, health, auth/
   db/schema/           Drizzle schema, one file per domain
   db/                  client, migrate + seed scripts
   proxy.ts             route pre-check (Next 16's replacement for middleware)
@@ -140,6 +142,48 @@ One-time setup (in Vercel → Settings → Environment Variables, for **Producti
 3. Optional `ASSISTANT_MODEL` (default `claude-sonnet-5-5`).
 
 The Assistant in the sidebar (for all users) is separate and still arrives in Phase 7.
+
+## Billing (Stripe)
+
+Admin → **Open Billing** sets what Starter, Plus and Pro cost (monthly and yearly). Hosts buy and
+change plans under Settings → **Payments**; cards live under Settings → **Cards**.
+
+- Payment happens on Stripe's own pages (Checkout and the billing portal). Garwin AI never sees
+  card numbers; it stores Stripe's ids, the plan, and a ledger of payments.
+- A plan is only ever granted from Stripe's own data: the signed webhook
+  (`/api/stripe/webhook`), or an object fetched from Stripe with the secret key. Nothing in a
+  browser URL can grant a plan. Each webhook event is processed once (`stripe_events`).
+- Changing a price never edits the old one: it is deactivated and a new one added, so existing
+  subscribers keep the price they signed up at.
+- `past_due` (a renewal payment failed) keeps the plan while Stripe retries, shows a warning and
+  notifies the host. When Stripe gives up, the subscription ends and the account is Free again.
+- Only the host can pay or change plans. Team members with the "billing.view" permission can see
+  the plan and history. Plans granted by an Admin (comp accounts) can't be changed at checkout.
+- Billing actions are in the audit log (`price.changed`, `checkout.created`,
+  `subscription.plan_changed`, `subscription.synced`).
+
+**Before adding Stripe keys to the dev site, give dev its own database** (a second Neon database
+or branch, with its own `DATABASE_URL` for Preview). If dev and live share one database, a plan
+bought on dev with a Stripe test card would also show as paid on the live site, and prices set on
+one site would overwrite the other's Stripe price ids.
+
+One-time setup, in **test mode** first (no real money moves):
+
+1. Create a Stripe account. Keep the **Test mode** switch on.
+2. Stripe → Developers → API keys → copy the **Secret key** (`sk_test_…`).
+3. Stripe → Developers → Webhooks → **Add endpoint**. URL: the one shown on Admin → Billing
+   (`https://dev.garwinai.com/api/stripe/webhook` for the dev site). Select the events listed
+   there. Copy the endpoint's **Signing secret** (`whsec_…`).
+4. Stripe → Settings → Billing → **Customer portal** → save the default settings once (this
+   switches on the "Manage billing" page).
+5. Vercel → Settings → Environment Variables → add `STRIPE_SECRET_KEY` and
+   `STRIPE_WEBHOOK_SECRET` for **Preview**, then redeploy dev.
+6. On the dev site: Admin → Billing → enter prices → **Save prices**.
+7. Test a purchase with Stripe's test card `4242 4242 4242 4242`, any future date, any CVC.
+
+Going live later: repeat steps 2 to 6 with Test mode **off**, a webhook endpoint for
+`https://garwinai.com/api/stripe/webhook`, and the variables set for **Production**. Then press
+**Check prices in Stripe** on Admin → Billing, because live mode starts with no prices.
 
 ## Sites and branches on Vercel
 

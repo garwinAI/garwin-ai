@@ -41,7 +41,7 @@
 | 1.5b | Data model: accounts/teams/permissions/invitations, plans/prices/subscriptions/payments, storage, AppZone, messaging, support, audit; central entitlement service | ✅ Done |
 | 3a | Teams: email/SMS invitations, permissions, workspace switching, shared storage folders with mark-for-deletion, host/team messaging | ✅ Done |
 | 1.6 | Deploy to dev.garwinai.com (Vercel + Neon + Resend), CSP header, data retention jobs | Next |
-| 2 | Billing: Admin-set prices, Stripe Checkout (monthly/yearly), customer portal, signed idempotent webhooks | |
+| 2 | Billing: Admin-set prices, Stripe Checkout (monthly/yearly), plan switching, customer portal, signed idempotent webhooks, payment ledger | ✅ Done (needs Stripe keys, see README) |
 | 3 | Core apps: Storage (R2, shared quota, permissions, mark-for-deletion), Calendar, Contacts, Messages, notifications, teams | |
 | 4 | Workspace: draggable/resizable widgets, themes, Pages menu | |
 | 5 | AppZone: marketplace, download limits, developer applications, sandbox origin, upload fees, Stripe Connect commission | |

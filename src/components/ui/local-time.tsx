@@ -1,10 +1,11 @@
 "use client";
 
-/** Formats a timestamp in the viewer's own time zone. */
-export function LocalTime({ iso }: { iso: string }) {
+/** Formats a timestamp in the viewer's own time zone. `dateOnly` leaves out the time of day. */
+export function LocalTime({ iso, dateOnly = false }: { iso: string; dateOnly?: boolean }) {
+  const date = new Date(iso);
   return (
     <time dateTime={iso} suppressHydrationWarning>
-      {new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+      {dateOnly ? date.toLocaleDateString(undefined, { dateStyle: "medium" }) : date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
     </time>
   );
 }
