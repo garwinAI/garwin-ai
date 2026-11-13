@@ -36,9 +36,11 @@ const schema = z
     // Override only for tests (points e2e runs at a local fake Twilio server).
     TWILIO_API_BASE: z.url().default("https://api.twilio.com"),
 
-    // Integrations added in later phases. Optional until their phase ships.
+    // Stripe (billing). Set both or neither; without them paid plans show "not available yet".
     STRIPE_SECRET_KEY: optional,
     STRIPE_WEBHOOK_SECRET: optional,
+    // Override only for tests (points e2e/integration runs at the fake Stripe server).
+    STRIPE_API_BASE: z.preprocess((v) => (v === "" ? undefined : v), z.url().optional()),
     // Anthropic API key. Powers the Admin Assistant (edits the site's code on the dev branch).
     ASSISTANT_API_KEY: optional,
     ASSISTANT_MODEL: z.string().trim().min(1).default("claude-sonnet-5-5"),
@@ -67,6 +69,18 @@ const schema = z
     const twilio = [e.TWILIO_ACCOUNT_SID, e.TWILIO_AUTH_TOKEN, e.TWILIO_FROM].filter(Boolean).length;
     if (twilio > 0 && twilio < 3) {
       ctx.addIssue({ code: "custom", path: ["TWILIO_ACCOUNT_SID"], message: "Set all of TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM, or none" });
+    }
+    if (Boolean(e.STRIPE_SECRET_KEY) !== Boolean(e.STRIPE_WEBHOOK_SECRET)) {
+      ctx.addIssue({ code: "custom", path: ["STRIPE_SECRET_KEY"], message: "Set both STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET, or neither" });
+    }
+    if (e.STRIPE_SECRET_KEY && !/^(sk|rk)_(test|live)_/.test(e.STRIPE_SECRET_KEY)) {
+      ctx.addIssue({ code: "custom", path: ["STRIPE_SECRET_KEY"], message: "STRIPE_SECRET_KEY must be a secret key (sk_test_..., sk_live_...), not a publishable key" });
+    }
+    if (e.STRIPE_WEBHOOK_SECRET && !e.STRIPE_WEBHOOK_SECRET.startsWith("whsec_")) {
+      ctx.addIssue({ code: "custom", path: ["STRIPE_WEBHOOK_SECRET"], message: "STRIPE_WEBHOOK_SECRET must be the webhook signing secret (whsec_...)" });
+    }
+    if (e.STRIPE_API_BASE && e.NODE_ENV === "production" && !/^http:\/\/(localhost|127\.0\.0\.1):/.test(e.STRIPE_API_BASE)) {
+      ctx.addIssue({ code: "custom", path: ["STRIPE_API_BASE"], message: "STRIPE_API_BASE is for tests only; remove it" });
     }
     if (e.NODE_ENV === "production" && e.MAIL_LOG_FILE) {
       ctx.addIssue({ code: "custom", path: ["MAIL_LOG_FILE"], message: "MAIL_LOG_FILE must not be set in production (it would write emails with secret links to disk)" });

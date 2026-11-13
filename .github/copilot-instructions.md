@@ -29,7 +29,8 @@ Assistant API and system health. Full spec: `docs/ROADMAP.md`.
 | `src/components/ui/` | Shared accessible primitives (see table below). Use these before writing new markup. |
 | `src/components/shell/` | App frame: responsive sidebar, mobile drawer, nav config (`nav.ts`) |
 | `src/components/` | Feature components (assistant, deactivated-app, logo) |
-| `src/server/services/` | **All database access.** One file per domain (`users.ts`, ...). Starts with `import "server-only"`. |
+| `src/server/services/` | **All database access.** One file per domain (`users.ts`, `billing.ts`, ...). Starts with `import "server-only"`. |
+| `src/server/stripe/` | The Stripe client. The only place the Stripe key is read. |
 | `src/lib/` | Shared logic with no DB access: `env`, `logger`, `errors`, `validation`, `actions`, `plans`, `entitlements`, `health` |
 | `src/lib/auth/` | Sessions, tokens and auth server actions |
 | `src/db/schema/` | Drizzle schema, one file per domain (auth, accounts, billing, apps, storage, appzone, messaging, support, audit) |

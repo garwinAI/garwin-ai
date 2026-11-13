@@ -69,10 +69,12 @@ src/
     (app)/             signed-in workspace (sidebar layout): assistant, messages, calendar,
                        apps, appzone, contacts, storage, settings/*, admin
     api/health/        public health check
+    api/stripe/webhook Stripe events (checked by signature)
   components/ui/       accessible building blocks (Button, TextField, CardSection, Drawer, NavTabs...)
   components/shell/    responsive sidebar + mobile drawer, navigation config
   components/          feature components (assistant chat + floating button, ...)
-  server/services/     ALL database access (users, apps, login events, entitlements, assistant, admin stats)
+  server/services/     ALL database access (users, apps, login events, entitlements, billing, assistant, admin stats)
+  server/stripe/       Stripe client (the only place the Stripe key is read)
   lib/                 env, logger, errors, validation, actions, plans, entitlements, health, auth/
   db/schema/           Drizzle schema, one file per domain
   db/                  client, migrate + seed scripts
@@ -178,6 +180,33 @@ start without one.
 3. Resend → **API Keys → Create** (permission: *Sending access*, domain: garwinai.com).
 4. In Vercel add `RESEND_API_KEY` (the key) and `EMAIL_FROM=Garwin AI <no-reply@garwinai.com>`.
    Never paste the key into code, chats or commits.
+
+## Set up payments (Stripe)
+
+Start with Stripe **test mode** on the dev site: test cards, nobody is charged. Use live keys on
+the live site only at launch. Every step works from a phone browser.
+
+**Dev site (test mode)**
+
+1. Create an account at [stripe.com](https://stripe.com) and keep **Test mode** on (switch at the top).
+2. **Developers → API keys** → reveal and copy the **Secret key** (`sk_test_...`).
+3. **Developers → Webhooks → Add destination** → "Your account" → select the events listed in
+   Admin → Billing (`checkout.session.completed`, the `customer.subscription.*` events,
+   `invoice.paid`, `invoice.payment_failed`) → Webhook endpoint → URL
+   `https://dev.garwinai.com/api/stripe/webhook` → create. Open it and reveal the **Signing secret** (`whsec_...`).
+4. **Settings → Billing → Customer portal** → allow customers to update payment methods, view
+   invoices and cancel subscriptions → **Save**. (Plan switching happens in Garwin AI, so leave
+   "switch plans" off.)
+5. Vercel → Settings → Environment Variables → add `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`
+   for **Preview** only → redeploy dev. Never paste either key into code, chats or commits.
+6. On dev.garwinai.com log in as Admin → **Admin → Plans & prices** → enter the prices → **Save prices**.
+   This creates the products and prices in Stripe.
+7. Test: sign up as a new user → Settings → Payments → Upgrade → card `4242 4242 4242 4242`, any
+   future date, any CVC.
+
+**Live site (at launch):** repeat steps 2–5 with Test mode **off**, the URL
+`https://garwinai.com/api/stripe/webhook`, and the variables set for **Production**. Then on
+garwinai.com set the prices in Admin → Plans & prices (or click **Check prices in Stripe**).
 
 ## Set up SMS invitations (Twilio)
 

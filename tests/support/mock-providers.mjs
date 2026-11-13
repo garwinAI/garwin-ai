@@ -1,9 +1,10 @@
-// Minimal stand-ins for the Resend (email), Twilio (SMS), GitHub (Update App, Admin Assistant) and
-// Anthropic (Admin Assistant) APIs, used only by e2e tests.
+// Minimal stand-ins for the Resend (email), Twilio (SMS), GitHub (Update App, Admin Assistant),
+// Anthropic (Admin Assistant) and Stripe (billing, see fake-stripe.mjs) APIs, used only by e2e tests.
 // The app sends real HTTP requests to them (same code path as production); each email or SMS is
 // appended as a JSON line to MOCK_MAIL_FILE so tests can read verification/reset/invite links.
 import { appendFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
+import { createFakeStripe } from "./fake-stripe.mjs";
 
 const port = Number(process.env.MOCK_RESEND_PORT ?? 3199);
 const file = process.env.MOCK_MAIL_FILE;
@@ -108,8 +109,15 @@ function github(req, res) {
   return json(404, { message: "Not Found" });
 }
 
-createServer((req, res) => {
+const stripe = createFakeStripe({
+  webhookUrl: process.env.STRIPE_WEBHOOK_URL ?? "http://localhost:3100/api/stripe/webhook",
+  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "whsec_test_e2e_not_a_real_secret",
+  publicBase: `http://localhost:${port}`,
+});
+
+createServer(async (req, res) => {
   if (req.method === "POST" && req.url === "/v1/messages") return anthropic(req, res);
+  if (await stripe.handle(req, res)) return;
   if (req.url?.startsWith("/repos/") || req.url?.startsWith("/github/")) {
     if (github(req, res) !== false) return;
   }

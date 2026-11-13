@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/session";
 import { env } from "@/lib/env";
 import { getMemberStats } from "@/server/services/admin-stats";
@@ -15,10 +16,10 @@ import { UpdateAppButton } from "./update-app";
 
 export const metadata: Metadata = { title: "Admin" };
 
-const UPCOMING = [
+const UPCOMING: { name: string; phase?: number; href?: string }[] = [
   { name: "Members", phase: 6 },
-  { name: "Plans & prices", phase: 2 },
-  { name: "Stripe settings", phase: 2 },
+  { name: "Plans & prices", href: "/admin/billing" },
+  { name: "Stripe settings", href: "/admin/billing#stripe-title" },
   { name: "Apps & marketplace", phase: 5 },
   { name: "Developer applications", phase: 5 },
   { name: "Support tickets", phase: 6 },
@@ -118,7 +119,11 @@ export default async function AdminPage() {
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {UPCOMING.map((t) => (
               <li key={t.name} className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2.5 text-sm">
-                {t.name} <PlannedBadge phase={t.phase} />
+                {t.href ? (
+                  <Link href={t.href} className="font-medium text-brand-700 hover:underline">{t.name}</Link>
+                ) : (
+                  <>{t.name} <PlannedBadge phase={t.phase!} /></>
+                )}
               </li>
             ))}
           </ul>

@@ -15,9 +15,32 @@ Browser ──> Vercel (Next.js 16)
                            PostgreSQL (pooled connection in production)
 ```
 
-Future services (added in their phase, each optional until then): Stripe (billing, Connect for
-developer payouts), object storage (R2/S3) for files, an email provider, a realtime provider for
+Stripe handles billing (see below). Future services (added in their phase, each optional until then): Stripe Connect for
+developer payouts, object storage (R2/S3) for files, an email provider, a realtime provider for
 Messages, an AI provider for the Assistant, and a **separate domain** for sandboxed AppZone items.
+
+## Billing (Stripe)
+
+- `src/server/stripe/client.ts` is the only place the Stripe key is read. `src/server/services/billing.ts`
+  does all billing work; `src/lib/billing.ts` holds the pure rules (price parsing, status mapping).
+- **Prices:** Admin → Billing. Saving deactivates the old `plan_prices` row, inserts a new one and
+  creates the Stripe price (product id `garwin_plan_<plan>`, `metadata.plan`/`metadata.interval`),
+  archiving the old Stripe price. Existing subscribers keep their price. "Check prices in Stripe"
+  re-creates prices missing from the connected account (e.g. after switching test → live keys).
+- **Buying:** the host only (`assertOwner`). Stripe Checkout hosts the card form. The redirect back
+  never grants anything: the plan changes when the signed webhook arrives (the page refreshes
+  itself for a few seconds while waiting).
+- **Switching:** in-app via `subscriptions.update`, prorated immediately, then the result read back
+  from Stripe is synced. **Cards, invoices, cancelling:** Stripe's billing portal.
+- **Webhook** `/api/stripe/webhook` (public, authenticated by signature; not an `isSameOrigin` route):
+  each event is stored in `stripe_events` first (primary key = idempotency), then the subscription
+  and invoice are **re-read from Stripe** and synced, so late or out-of-order events can't roll an
+  account back. Failures are stored on the event row and return 500 so Stripe retries.
+- One current subscription per account is enforced by `subscriptions_one_current_idx`; the sync
+  locks the account row and confirms with Stripe before marking an older subscription ended.
+  Checkout is refused while an Admin-granted plan is active.
+- Paid invoices and failed payments go into the `payments` ledger (Settings → Payments → Billing history).
+- Tests use `tests/support/fake-stripe.mjs` (API, hosted Checkout and portal pages, signed webhooks).
 
 ## Request flow
 
