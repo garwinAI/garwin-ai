@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, LogOut } from "lucide-react";
+import { Bell, LogOut, LifeBuoy } from "lucide-react";
 import { logOut } from "@/lib/auth/actions";
 import { cn } from "@/components/ui/cn";
 import { isActivePath, type NavItem } from "./nav";
@@ -76,6 +76,20 @@ export function SidebarNav({
               <span className="sr-only">({unread} unread)</span>
             </span>
           )}
+        </Link>
+        <Link
+          href="/support"
+          onClick={onNavigate}
+          title={collapsed ? "Help & support" : undefined}
+          aria-current={isActivePath(pathname, "/support") ? "page" : undefined}
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-brand-600",
+            collapsed && "justify-center",
+            isActivePath(pathname, "/support") && "bg-neutral-100 font-medium text-neutral-900",
+          )}
+        >
+          <LifeBuoy className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+          <span className={collapsed ? "sr-only" : "flex-1 truncate"}>Help &amp; support</span>
         </Link>
         {!collapsed && (
           <div className="mb-1 px-2 py-1.5">

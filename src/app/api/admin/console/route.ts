@@ -3,7 +3,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/session";
 import { consoleEvents } from "@/server/services/console";
+import { after } from "next/server";
 import { runSystemChecks } from "@/server/services/system";
+import { runAutopilot } from "@/server/services/autopilot";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,8 @@ export async function GET(req: Request) {
   if (Date.now() - lastChecks > 30_000) {
     lastChecks = Date.now();
     await runSystemChecks();
+    // Auto Pilot answers any tickets it hasn't yet, after this response is sent.
+    after(() => runAutopilot().then(() => undefined));
   }
   const lines = await consoleEvents(user, { afterId: parsed.data.afterId, limit: 200 });
   return NextResponse.json({ lines }, { headers: { "Cache-Control": "no-store" } });

@@ -151,9 +151,27 @@ Admin → **App update** compares the `dev` branch with the `live` branch on Git
   events) are remembered per device. **Record** / **Stop Recording** saves what was shown as a
   `.txt` file in your Storage (folder "Console recordings"); **Clear** empties the screen;
   **Close** goes back to Apps.
+- **Admin home widgets** also include: Plan upgrades & revenue (today / 7 / 30 / 365 days, from paid
+  Stripe invoices and logged upgrades), free vs paid users with a 14-day bar chart of new users and
+  upgrades, a Server rack (database size, storage used vs allocated, files, AppZone counts), Admin
+  Assistant (Open, View chat log, Auto Pilot), Calendar (scheduled deploy, remote views ending,
+  renewals), Support tickets, Messages and Notifications.
 - Console only shows events from features that exist. Support ticket screens, calendar events, file
   uploads, public/private files and AppZone publishing/purchasing arrive in later phases; Console
   already has wording for them.
+
+## Support tickets and Auto Pilot
+
+- Users: **Help & support** in the sidebar (`/support`) to ask a question and follow replies.
+- Admins: **Admin → Support tickets** (`/admin/support`): Needs reply, Escalated, Waiting for
+  customer, Resolved & closed. Reply and resolve, reply and wait, escalate, close or reopen.
+- **Auto Pilot** (Admin home → Admin Assistant → Auto Pilot On/Off): while on, every new question
+  or follow-up is answered by Claude within seconds. Simple how-to questions are answered and
+  resolved; refunds, billing disputes, account deletion, legal/security issues, bugs, upset
+  customers and anything uncertain are answered kindly and **escalated** to Admins (notification +
+  Escalated list). Auto Pilot never touches escalated tickets again, can't change accounts, billing
+  or code, and its replies are marked "Garwin AI Support (Auto Pilot)". Needs `ASSISTANT_API_KEY`.
+- Everything appears in Console.
 
 ## Launch checklist
 

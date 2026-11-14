@@ -18,14 +18,29 @@ export type ModelReply = {
   usage?: { input_tokens?: number; output_tokens?: number };
 };
 
-export async function callModel(input: { system: string; tools: Tool[]; messages: ModelMessage[]; timeoutMs: number }): Promise<ModelReply> {
+export async function callModel(input: {
+  system: string;
+  tools: Tool[];
+  messages: ModelMessage[];
+  timeoutMs: number;
+  /** Force a specific tool (used by Auto Pilot so every answer comes with a decision). */
+  toolChoice?: { type: "tool"; name: string };
+  maxTokens?: number;
+}): Promise<ModelReply> {
   const config = env();
   let res: Response;
   try {
     res = await fetch(config.ASSISTANT_API_URL, {
       method: "POST",
       headers: { "x-api-key": config.ASSISTANT_API_KEY!, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: config.ASSISTANT_MODEL, max_tokens: 16_000, system: input.system, tools: input.tools, messages: input.messages }),
+      body: JSON.stringify({
+        model: config.ASSISTANT_MODEL,
+        max_tokens: input.maxTokens ?? 16_000,
+        system: input.system,
+        tools: input.tools,
+        messages: input.messages,
+        ...(input.toolChoice && { tool_choice: input.toolChoice }),
+      }),
       signal: AbortSignal.timeout(input.timeoutMs),
       cache: "no-store",
     });

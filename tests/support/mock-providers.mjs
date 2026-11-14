@@ -39,6 +39,25 @@ function anthropic(req, res) {
     if (!model || !Array.isArray(tools) || !system) return json(400, { type: "error", error: { type: "invalid_request_error" } });
     const last = messages.at(-1);
     const usage = { input_tokens: 100, output_tokens: 20 };
+    // Auto Pilot (support tickets): refunds get escalated, everything else answered and closed.
+    if (tools.some((t) => t.name === "resolve_ticket")) {
+      const text = typeof last.content === "string" ? last.content : JSON.stringify(last.content);
+      const escalate = /refund/i.test(text);
+      return json(200, {
+        content: [
+          {
+            type: "tool_use",
+            id: "toolu_support",
+            name: "resolve_ticket",
+            input: escalate
+              ? { reply: "Thanks for reaching out. I've passed this to our team and a person will reply here soon. Garwin AI Support", decision: "escalate", reason: "Refund request" }
+              : { reply: "You can change your plan any time in Settings → Payments. Garwin AI Support", decision: "close", reason: "Simple how-to question" },
+          },
+        ],
+        stop_reason: "tool_use",
+        usage,
+      });
+    }
     if (Array.isArray(last.content) && last.content.some((b) => b.type === "tool_result")) {
       const blocked = last.content.find((b) => b.tool_use_id === "toolu_1");
       return json(200, { content: [{ type: "text", text: `Updated the welcome line. Protected write refused: ${blocked?.is_error === true}.` }], stop_reason: "end_turn", usage });

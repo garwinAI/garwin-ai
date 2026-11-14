@@ -1,5 +1,4 @@
-import { expect, test } from "./helpers";
-import { logIn, signUp } from "./helpers";
+import { clearNotifications, expect, logIn, signUp, test } from "./helpers";
 
 test("navigation follows the spec order", async ({ page }) => {
   await signUp(page);
@@ -72,9 +71,13 @@ test("Admin publishes dev to live with Update App, then the button is greyed out
   test.skip(!email || !password, "ADMIN_EMAIL / ADMIN_PASSWORD not set (run npm run db:seed first)");
   // The fake GitHub (tests/support/mock-providers.mjs) starts with dev one change ahead of live.
   await request.post("http://localhost:3199/github/reset");
+  // Notifications from other tests (e.g. support tickets) could push this one off the list.
+  await clearNotifications(email!);
   await logIn(page, email!, password!);
   await expect(page).toHaveURL(/\/assistant$/);
 
+  // Admin always asks GitHub fresh (other pages may use a 60-second cached answer).
+  await page.goto("/admin");
   await page.goto("/notifications");
   await expect(page.getByRole("link", { name: "App update ready to publish" }).first()).toBeVisible();
 

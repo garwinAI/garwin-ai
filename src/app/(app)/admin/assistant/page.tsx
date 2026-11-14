@@ -20,7 +20,12 @@ export default async function AdminAssistantPage() {
       <PageHeader
         title="Admin Assistant"
         description="Describe a change to the website. The Assistant edits the code and saves it to the dev site."
-        actions={<ButtonLink href="/admin" variant="secondary" size="sm">Back to Admin</ButtonLink>}
+        actions={
+          <>
+            <ButtonLink href="/admin/assistant/log" variant="secondary" size="sm">View chat log</ButtonLink>
+            <ButtonLink href="/admin" variant="secondary" size="sm">Back to Admin</ButtonLink>
+          </>
+        }
       />
       <PageBody>
         <details className="card px-4 py-3 text-sm text-neutral-700">

@@ -32,6 +32,8 @@ export const supportTickets = pgTable(
     status: ticketStatus("status").notNull().default("open"),
     priority: ticketPriority("priority").notNull().default("normal"),
     firstResponseAt: ts("first_response_at"),
+    // Set when Auto Pilot (or an Admin) hands the ticket to a person; Auto Pilot then leaves it alone.
+    escalatedAt: ts("escalated_at"),
     resolvedAt: ts("resolved_at"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

@@ -83,3 +83,8 @@ export async function grantPlan(email: string, plan: "starter" | "plus" | "pro")
 }
 
 export const uniquePhone = () => `+1555${Math.floor(1_000_000 + Math.random() * 8_999_999)}`;
+
+/** Test setup only: empties a user's notifications, so a test sees just what it triggers. */
+export async function clearNotifications(email: string) {
+  await sql().query(`delete from notifications where user_id = (select id from users where email = $1)`, [email]);
+}

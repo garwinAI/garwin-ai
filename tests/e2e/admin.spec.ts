@@ -19,7 +19,7 @@ async function logInAdmin(page: Page) {
 test("Admin home shows the dashboard blocks", async ({ page }) => {
   await logInAdmin(page);
   await page.goto("/admin");
-  for (const name of ["System health", "Users", "Support tickets", "Your inbox", "Live activity", "Launch checklist", "App update", "All users", "AppZone apps, widgets and themes"]) {
+  for (const name of ["System health", "Users", "Support tickets", "Messages", "Notifications", "Live activity", "Launch checklist", "App update", "All users", "AppZone apps, widgets and themes"]) {
     await expect(page.getByRole("region", { name, exact: true })).toBeVisible();
   }
   await expect(page.getByRole("img", { name: /users: \d+ paid, \d+ free/ })).toBeVisible();

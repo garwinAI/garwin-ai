@@ -53,7 +53,7 @@ erDiagram
 ```
 
 `audit_logs` deliberately has **no foreign keys** so history survives deletions, and a trigger
-rejects `UPDATE`, `DELETE` and `TRUNCATE`. `stripe_events`, `rate_limits`, `launch_checklist` (Admin launch steps ticked on this site) and `system_status` (last health color, for Console) stand alone. `users.status` (active, needs_attention, inactive, marked_for_deletion, deleted) and `users.admin_note` are set by Admins. `console_recordings` hold Console recordings; each has a matching file in the Admin's storage (cascade delete). Support access scopes include `notifications.view` for remote view.
+rejects `UPDATE`, `DELETE` and `TRUNCATE`. `stripe_events`, `rate_limits`, `launch_checklist` (Admin launch steps ticked on this site) and `system_status` (last health color, for Console) stand alone. `users.status` (active, needs_attention, inactive, marked_for_deletion, deleted) and `users.admin_note` are set by Admins. `console_recordings` hold Console recordings; each has a matching file in the Admin's storage (cascade delete). Support access scopes include `notifications.view` for remote view. `support_tickets.escalated_at` marks tickets handed to a person (Auto Pilot then leaves them alone). `assistant_chat_messages` keeps each Admin's Admin Assistant chat log.
 
 ## Core rules
 

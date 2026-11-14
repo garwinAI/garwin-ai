@@ -26,6 +26,7 @@ const CATEGORY_BY_PREFIX: [string, ConsoleCategory][] = [
   ["system.", "SYSTEM"],
   ["support_ticket.", "SUPPORT"],
   ["support_access.", "SUPPORT"],
+  ["autopilot.", "SUPPORT"],
   ["storage.", "STORAGE"],
   ["file.", "STORAGE"],
   ["member.", "TEAM"],
@@ -104,6 +105,24 @@ export function describe(e: ConsoleEvent): [ConsoleLevel, string] {
 
     case "support_ticket.overdue":
       return [Number(m.hours) >= 72 ? "alert" : "warn", `Support ticket "${str(m.subject)}" unanswered for ${str(m.hours)}+ hours`];
+    case "support_ticket.opened":
+      return ["warn", `New support ticket from ${who}: "${str(m.subject)}"`];
+    case "support_ticket.user_replied":
+      return ["info", `${who} replied on ticket "${str(m.subject)}"`];
+    case "support_ticket.replied":
+      return ["info", `${admin} replied to ticket "${str(m.subject)}"`];
+    case "support_ticket.reopened":
+      return ["info", `${admin} reopened ticket "${str(m.subject)}"`];
+    case "support_ticket.escalated":
+      return ["warn", `${admin} escalated ticket "${str(m.subject)}"`];
+    case "support_ticket.autopilot_answered":
+      return m.decision === "close"
+        ? ["good", `Auto Pilot answered and closed "${str(m.subject)}"`]
+        : ["warn", `Auto Pilot answered and ESCALATED "${str(m.subject)}"${m.reason ? `: ${str(m.reason)}` : ""}`];
+    case "autopilot.turned_on":
+      return ["good", `${admin} turned Auto Pilot ON`];
+    case "autopilot.turned_off":
+      return ["warn", `${admin} turned Auto Pilot OFF`];
     case "support_ticket.cleared":
       return ["good", `${admin} cleared support ticket "${str(m.subject)}"`];
     case "support_access.requested":

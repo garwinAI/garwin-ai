@@ -40,6 +40,20 @@ Messages, an AI provider for the Assistant, and a **separate domain** for sandbo
   `console-recording:<id>`) in the Admin's "Console recordings" folder, counted against quota.
   Deleting the file deletes the recording.
 
+## Support and Auto Pilot
+
+- `src/server/services/support.ts`: tickets are a `support_tickets` row plus a "support"
+  conversation. Users see only tickets they opened (others are NOT_FOUND).
+- `src/server/services/autopilot.ts` + `src/lib/autopilot.ts`: state in `system_status`
+  ("autopilot" → on/off; `updated_at` = since). `answerTicket()` sends the thread to Claude with a
+  single forced tool (`resolve_ticket`: reply + close/escalate); anything unusable or any API error
+  escalates. Before posting it locks the ticket and checks nobody answered meanwhile. Escalated
+  tickets (`escalated_at`) are never touched again. Triggered with `after()` when a customer writes,
+  and swept when Admin home loads or Console polls.
+- Admin Assistant chats are saved in `assistant_chat_messages` (View chat log).
+- Widget numbers: `src/server/services/dashboard.ts` (payments ledger, audit log, users, accounts,
+  `pg_database_size`); upgrade rules in `src/lib/growth.ts`.
+
 ## Publishing and launch
 
 - **Deploy Now / Update App** fast-forward `live` to the reviewed dev commit through the GitHub API

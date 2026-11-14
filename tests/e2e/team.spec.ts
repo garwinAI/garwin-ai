@@ -272,6 +272,7 @@ test.describe("messaging and removal", () => {
 test("login keeps a safe return path and ignores unsafe ones", async ({ page }) => {
   const { email } = await signUp(page);
   await page.getByRole("button", { name: "Log Out" }).click();
+  await expect(page).toHaveURL(/\/login$/); // wait until signed out before the next navigation
   await page.goto("/login?next=//evil.example/steal");
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(PASSWORD);

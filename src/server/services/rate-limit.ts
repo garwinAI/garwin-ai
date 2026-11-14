@@ -29,6 +29,7 @@ export const LIMITS = {
   appSchedulePerUser: { limit: 30, windowSec: 60 * 60 },
   siteEditPerUser: { limit: 30, windowSec: 60 * 60 },
   checkoutPerUser: { limit: 10, windowSec: 60 * 60 },
+  supportTicketPerUser: { limit: 10, windowSec: 60 * 60 },
 } satisfies Record<string, Limit>;
 
 export type RateResult = { allowed: boolean; count: number; retryAfterSec: number };
