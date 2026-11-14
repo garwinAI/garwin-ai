@@ -165,7 +165,12 @@ Admin → **App update** compares the `dev` branch with the `live` branch on Git
 - Users: **Help & support** in the sidebar (`/support`) to ask a question and follow replies.
 - Admins: **Admin → Support tickets** (`/admin/support`): Needs reply, Escalated, Waiting for
   customer, Resolved & closed. Reply and resolve, reply and wait, escalate, close or reopen.
-- **Auto Pilot** (Admin home → Admin Assistant → Auto Pilot On/Off): while on, every new question
+- **Auto Pilot** (Admin home → Admin Assistant → Auto Pilot On/Off) does exactly four things and
+  nothing else: answers support tickets and their follow-up messages and updates their status;
+  watches system health every 5 minutes; applies a fixed list of safe fixes (ends expired remote
+  views, retries failed Stripe webhooks, creates prices missing in Stripe); and alerts Admins once a
+  day about problems it can't fix (missing keys, tickets waiting over 48 h, failed scheduled
+  deploys). The fixes are plain code, not AI decisions. For tickets: while on, every new question
   or follow-up is answered by Claude within seconds. Simple how-to questions are answered and
   resolved; refunds, billing disputes, account deletion, legal/security issues, bugs, upset
   customers and anything uncertain are answered kindly and **escalated** to Admins (notification +

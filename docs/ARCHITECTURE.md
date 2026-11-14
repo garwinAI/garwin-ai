@@ -50,6 +50,11 @@ Messages, an AI provider for the Assistant, and a **separate domain** for sandbo
   escalates. Before posting it locks the ticket and checks nobody answered meanwhile. Escalated
   tickets (`escalated_at`) are never touched again. Triggered with `after()` when a customer writes,
   and swept when Admin home loads or Console polls.
+- Health job (`src/server/services/autopilot-health.ts`), run with Auto Pilot at most every 5 min:
+  only the fixes in `AUTOPILOT_SCOPE` (expire remote views, retry failed Stripe events from their
+  stored payload, create missing Stripe prices), each logged as `autopilot.fixed`; problems it
+  can't fix become one Admin notification per problem per day (`autopilot.alerted`). Adding a new
+  automatic fix means adding code and updating `AUTOPILOT_SCOPE`; the AI never chooses fixes.
 - Admin Assistant chats are saved in `assistant_chat_messages` (View chat log).
 - Widget numbers: `src/server/services/dashboard.ts` (payments ledger, audit log, users, accounts,
   `pg_database_size`); upgrade rules in `src/lib/growth.ts`.

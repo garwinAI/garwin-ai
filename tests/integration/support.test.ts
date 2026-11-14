@@ -17,6 +17,7 @@ type Mods = {
   users: typeof import("@/server/services/users");
   dashboard: typeof import("@/server/services/dashboard");
   chat: typeof import("@/server/services/assistant-log");
+  health: typeof import("@/server/services/autopilot-health");
 };
 let m: Mods;
 
@@ -49,6 +50,7 @@ beforeAll(async () => {
     users: await import("@/server/services/users"),
     dashboard: await import("@/server/services/dashboard"),
     chat: await import("@/server/services/assistant-log"),
+    health: await import("@/server/services/autopilot-health"),
   };
 });
 
@@ -188,5 +190,51 @@ describe("Admin Assistant chat log and dashboard numbers", () => {
     expect(server.databaseBytes).toBeGreaterThan(0);
     expect(server.storage.allocated).toBeGreaterThan(0);
     await expect(m.dashboard.serverStats({ id: customer.id, role: "member" })).rejects.toThrow(/Only an Admin/);
+  });
+});
+
+describe("Auto Pilot health job", () => {
+  it("applies only its listed fixes, alerts once a day, and waits 5 minutes between runs", async () => {
+    const admin = await person("admin");
+    const user = await person();
+    const [owner] = await m.db.select().from(m.schema.accountMembers).where(eq(m.schema.accountMembers.userId, user.id));
+    // A remote view whose time is up but which is still marked approved.
+    const decided = new Date(Date.now() - 2 * 3600_000);
+    const [grant] = await m.db
+      .insert(m.schema.supportAccessGrants)
+      .values({ accountId: owner.accountId, requestedBy: admin.id, reason: "Checking something for them", status: "approved", decidedAt: decided, expiresAt: new Date(Date.now() - 3600_000) })
+      .returning();
+
+    const first = await m.health.runHealthAutopilot({ force: true });
+    expect(first!.fixed).toEqual(expect.arrayContaining([expect.objectContaining({ fix: "expired_remote_views" })]));
+    const [g] = await m.db.select().from(m.schema.supportAccessGrants).where(eq(m.schema.supportAccessGrants.id, grant.id));
+    expect(g.status).toBe("expired");
+    // No Stripe keys in this test environment: it reports instead of trying.
+    expect(first!.alerted).toContain("payments_unconfigured");
+
+    // Alerts are sent once per problem per day.
+    await m.health.runHealthAutopilot({ force: true });
+    const alerts = await m.db
+      .select()
+      .from(m.schema.notifications)
+      .where(and(eq(m.schema.notifications.userId, admin.id), eq(m.schema.notifications.title, "Payments aren't set up")));
+    expect(alerts).toHaveLength(1);
+
+    // Spacing: a normal (not forced) run right after does nothing.
+    expect(await m.health.runHealthAutopilot()).toBeNull();
+  });
+
+  it("runs only while Auto Pilot is on", async () => {
+    const admin = await person("admin");
+    await m.autopilot.setAutopilot(admin, false);
+    await m.db.delete(m.schema.systemStatus).where(eq(m.schema.systemStatus.key, "autopilot_health_at"));
+    await m.autopilot.runAutopilot();
+    const [ran] = await m.db.select().from(m.schema.systemStatus).where(eq(m.schema.systemStatus.key, "autopilot_health_at"));
+    expect(ran).toBeUndefined();
+    await m.autopilot.setAutopilot(admin, true);
+    await m.autopilot.runAutopilot();
+    const [ranNow] = await m.db.select().from(m.schema.systemStatus).where(eq(m.schema.systemStatus.key, "autopilot_health_at"));
+    expect(ranNow).toBeDefined();
+    await m.autopilot.setAutopilot(admin, false);
   });
 });

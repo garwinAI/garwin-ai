@@ -68,3 +68,20 @@ export function autopilotSentence(state: AutopilotState) {
   if (!state.since) return state.on ? "Auto Pilot is running." : "Auto Pilot has never been turned on.";
   return state.on ? `Auto Pilot has been running since ${fmt(state.since)}.` : `Auto Pilot turned off on ${fmt(state.since)}.`;
 }
+
+/**
+ * Everything Auto Pilot is allowed to do. It can't do anything else: no code changes, settings,
+ * users, plans, prices or payments. Shown in the Admin Assistant widget.
+ */
+export const AUTOPILOT_SCOPE = [
+  "Answers support tickets and their follow-up messages, then marks them resolved or escalates them to Admins",
+  "Watches system health every 5 minutes",
+  "Fixes automatically: ends expired remote views, retries failed Stripe webhooks, creates prices missing in Stripe",
+  "Alerts Admins about problems it can't fix (missing keys, tickets waiting over 48 h, failed scheduled deploys)",
+] as const;
+
+export const FIX_LABELS: Record<string, string> = {
+  expired_remote_views: "ended expired remote views",
+  stripe_events_retried: "retried failed Stripe webhooks",
+  stripe_prices_created: "created missing Stripe prices",
+};

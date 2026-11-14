@@ -14,6 +14,7 @@ import { assertAdmin } from "./admin-users";
 import { notify } from "./notifications";
 import type { RequestMeta } from "./security-events";
 import { listAdminIds } from "./users";
+import { runHealthAutopilot } from "./autopilot-health";
 
 const log = logger.child({ module: "autopilot" });
 const KEY = "autopilot";
@@ -43,7 +44,14 @@ export async function autopilotStats() {
     .where(and(eq(auditLogs.action, "support_ticket.autopilot_answered"), sql`${auditLogs.createdAt} > now() - interval '1 day'`))
     .groupBy(sql`${auditLogs.metadata}->>'decision'`);
   const by = Object.fromEntries(rows.map((r) => [r.decision, r.n]));
-  return { closed: by.close ?? 0, escalated: by.escalate ?? 0 };
+  const [health] = await db
+    .select({
+      fixes: sql<number>`coalesce(sum((${auditLogs.metadata}->>'count')::int) filter (where ${auditLogs.action} = 'autopilot.fixed'), 0)::int`,
+      alerts: sql<number>`count(*) filter (where ${auditLogs.action} = 'autopilot.alerted')::int`,
+    })
+    .from(auditLogs)
+    .where(and(inArray(auditLogs.action, ["autopilot.fixed", "autopilot.alerted"]), sql`${auditLogs.createdAt} > now() - interval '1 day'`));
+  return { closed: by.close ?? 0, escalated: by.escalate ?? 0, fixes: health.fixes, alerts: health.alerts };
 }
 
 /** Tickets Auto Pilot should answer: open, not escalated, and the customer wrote last. */
@@ -62,14 +70,20 @@ async function ticketsWaiting(limit: number) {
     .limit(limit);
 }
 
-/** Answers waiting tickets while Auto Pilot is on. Never throws. Returns how many it handled. */
+/**
+ * While Auto Pilot is on: answers waiting tickets, then runs the health job (safe fixes + alerts,
+ * at most every 5 minutes). Never throws. Returns how many tickets it answered.
+ */
 export async function runAutopilot(limit = 3) {
   try {
-    if (!autopilotConfigured() || !(await getAutopilot()).on) return 0;
+    if (!(await getAutopilot()).on) return 0;
     let handled = 0;
-    for (const t of await ticketsWaiting(limit)) {
-      if (await answerTicket(t.id)) handled++;
+    if (autopilotConfigured()) {
+      for (const t of await ticketsWaiting(limit)) {
+        if (await answerTicket(t.id)) handled++;
+      }
     }
+    await runHealthAutopilot();
     return handled;
   } catch (err) {
     log.error("autopilot.run_failed", { err });

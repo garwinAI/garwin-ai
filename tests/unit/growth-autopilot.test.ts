@@ -55,5 +55,7 @@ describe("Auto Pilot", () => {
     expect(describeEvent(ev("support_ticket.autopilot_answered", { subject: "Plans", decision: "close" }))).toEqual(["good", 'Auto Pilot answered and closed "Plans"']);
     expect(describeEvent(ev("support_ticket.autopilot_answered", { subject: "Money", decision: "escalate", reason: "Refund request" }))[1]).toBe('Auto Pilot answered and ESCALATED "Money": Refund request');
     expect(describeEvent({ ...ev("autopilot.turned_on"), actorType: "admin", actorName: "Sam" })[1]).toBe("Admin Sam turned Auto Pilot ON");
+    expect(describeEvent(ev("autopilot.fixed", { fix: "stripe_events_retried", count: 2 }))).toEqual(["good", "Auto Pilot fixed: retried failed Stripe webhooks (2)"]);
+    expect(describeEvent(ev("autopilot.alerted", { title: "Payments aren't set up" }))).toEqual(["alert", "Auto Pilot alert: Payments aren't set up (can't fix automatically)"]);
   });
 });

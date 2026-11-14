@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth/session";
 import { HEALTH_STYLES } from "@/lib/health";
 import { PLAN_ORDER, PLAN_SPEC } from "@/lib/plans";
 import { itemListQuery, ticketTone, userListQuery } from "@/lib/admin-dashboard";
-import { autopilotSentence } from "@/lib/autopilot";
+import { AUTOPILOT_SCOPE, autopilotSentence } from "@/lib/autopilot";
 import { formatPrice } from "@/lib/pricing";
 import { cn } from "@/components/ui/cn";
 import { PageBody, PageHeader } from "@/components/ui/page-header";
@@ -208,13 +208,17 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                   </p>
                   <p className="mt-0.5 text-sm text-neutral-700" data-testid="autopilot-status">{autopilotSentence(autopilot)}</p>
                 </div>
-                <AutopilotToggle on={autopilot.on} canTurnOn={canAutopilot} />
+                <AutopilotToggle on={autopilot.on} canTurnOn />
               </div>
+              <ul className="mt-2 list-inside list-disc space-y-0.5 text-xs text-neutral-700" aria-label="What Auto Pilot does">
+                {AUTOPILOT_SCOPE.map((s) => <li key={s}>{s}</li>)}
+              </ul>
+              <p className="mt-1 text-xs text-neutral-600">It can&apos;t do anything else.</p>
               <p className="mt-2 text-xs text-neutral-600">
-                Answers support tickets with Claude, then closes simple ones and escalates the rest to Admins. Last 24 h:{" "}
-                <strong>{apStats.closed}</strong> closed, <strong>{apStats.escalated}</strong> escalated.
+                Last 24 h: <strong>{apStats.closed}</strong> tickets resolved, <strong>{apStats.escalated}</strong> escalated, <strong>{apStats.fixes}</strong> automatic fix
+                {apStats.fixes === 1 ? "" : "es"}, <strong>{apStats.alerts}</strong> alert{apStats.alerts === 1 ? "" : "s"}.
               </p>
-              {!canAutopilot && <p className="mt-1 text-xs font-medium text-red-700">Needs the Claude Console API key (ASSISTANT_API_KEY) before it can be turned on.</p>}
+              {!canAutopilot && <p className="mt-1 text-xs font-medium text-red-700">Answering tickets needs the Claude Console API key (ASSISTANT_API_KEY). Health monitoring works without it.</p>}
             </div>
           </Block>
 

@@ -18,11 +18,14 @@ type Actor = { id: string; role: string; name: string };
 const otherAdminMessage = "That remote view session doesn't exist or has ended.";
 
 /** Marks approved grants past their end time as expired (cheap, runs before reads). */
-async function expireOldGrants() {
-  await db
+/** Returns how many grants it expired. */
+export async function expireOldGrants() {
+  const rows = await db
     .update(supportAccessGrants)
     .set({ status: "expired" })
-    .where(and(eq(supportAccessGrants.status, "approved"), lte(supportAccessGrants.expiresAt, sql`now()`)));
+    .where(and(eq(supportAccessGrants.status, "approved"), lte(supportAccessGrants.expiresAt, sql`now()`)))
+    .returning({ id: supportAccessGrants.id });
+  return rows.length;
 }
 
 /** Admin asks to view `userId`'s own workspace. Returns the (new or existing open) request. */

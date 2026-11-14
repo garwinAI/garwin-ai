@@ -1,3 +1,5 @@
+import { FIX_LABELS } from "./autopilot";
+
 // Turns audit log rows into Console lines. Pure, so every message is unit-tested.
 // Unknown actions still print (generically), so new events show up without code changes.
 
@@ -119,6 +121,10 @@ export function describe(e: ConsoleEvent): [ConsoleLevel, string] {
       return m.decision === "close"
         ? ["good", `Auto Pilot answered and closed "${str(m.subject)}"`]
         : ["warn", `Auto Pilot answered and ESCALATED "${str(m.subject)}"${m.reason ? `: ${str(m.reason)}` : ""}`];
+    case "autopilot.fixed":
+      return ["good", `Auto Pilot fixed: ${FIX_LABELS[str(m.fix)] ?? nice(str(m.fix))} (${str(m.count)})`];
+    case "autopilot.alerted":
+      return ["alert", `Auto Pilot alert: ${str(m.title)} (can't fix automatically)`];
     case "autopilot.turned_on":
       return ["good", `${admin} turned Auto Pilot ON`];
     case "autopilot.turned_off":

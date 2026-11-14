@@ -139,7 +139,8 @@ export async function setPlanPrice(admin: UserRef, planId: PaidPlanId, interval:
  * Makes sure every active price exists in the connected Stripe account. Fixes prices saved before
  * Stripe was connected, or made with other keys (test vs live). Returns how many were created.
  */
-export async function syncPricesToStripe(admin: UserRef, meta?: RequestMeta) {
+/** `admin` is null when Auto Pilot runs it as an automatic fix. */
+export async function syncPricesToStripe(admin: UserRef | null, meta?: RequestMeta) {
   const stripe = requireStripe();
   let created = 0;
   for (const p of await listAdminPrices()) {
@@ -151,7 +152,7 @@ export async function syncPricesToStripe(admin: UserRef, meta?: RequestMeta) {
     created++;
   }
   if (created) {
-    await recordAudit({ accountId: null, actorUserId: admin.id, actorType: "admin", action: "plan_price.synced", metadata: { created }, meta });
+    await recordAudit({ accountId: null, actorUserId: admin?.id ?? null, actorType: admin ? "admin" : "system", action: "plan_price.synced", metadata: { created }, meta });
   }
   return created;
 }
