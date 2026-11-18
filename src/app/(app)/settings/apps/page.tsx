@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AppIcon } from "@/components/app-icon";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/session";
 import { getEntitlements } from "@/server/services/entitlements";
@@ -31,7 +32,7 @@ export default async function AppsSettings() {
           return (
             <li key={app.slug} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <span className={`h-10 w-10 shrink-0 rounded-lg bg-gradient-to-br ${app.color} ${active ? "" : "opacity-40 grayscale"}`} aria-hidden="true" />
+                <AppIcon spec={app.icon} size="md" dimmed={!active} />
                 <div>
                   <p className="flex items-center gap-2 text-sm font-medium">
                     {app.name}

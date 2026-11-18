@@ -12,3 +12,4 @@ export * from "./audit";
 export * from "./launch";
 export * from "./console";
 export * from "./assistant";
+export * from "./workspace";

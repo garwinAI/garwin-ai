@@ -22,6 +22,7 @@ import {
 import { getStripe, isMissing, stripeConfigured } from "@/server/stripe/client";
 import { assertOwner, getEntitlements } from "./entitlements";
 import { recordAudit } from "./audit";
+import { recordUploadFeePayment } from "./appzone";
 import { enforce, LIMITS } from "./rate-limit";
 import type { RequestMeta } from "./security-events";
 
@@ -347,11 +348,17 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<"processed
       subscriptionId = idOf(event.data.object.parent?.subscription_details?.subscription);
     }
 
+    let uploadFee = false;
+    if (event.type === "payment_intent.succeeded" && event.data.object.metadata?.kind === "upload_fee") {
+      // Re-read from Stripe rather than trusting the event body.
+      uploadFee = await recordUploadFeePayment(await stripe.paymentIntents.retrieve(event.data.object.id));
+    }
+
     if (subscriptionId) await syncSubscription(await stripe.subscriptions.retrieve(subscriptionId));
     if (invoiceId) await recordInvoice(await stripe.invoices.retrieve(invoiceId));
 
     await db.update(stripeEvents).set({ processedAt: new Date(), error: null }).where(eq(stripeEvents.id, event.id));
-    return subscriptionId || invoiceId ? "processed" : "ignored";
+    return subscriptionId || invoiceId || uploadFee ? "processed" : "ignored";
   } catch (err) {
     await db
       .update(stripeEvents)

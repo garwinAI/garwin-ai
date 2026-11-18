@@ -8,7 +8,7 @@ import { ADMIN_APPS, BUILT_IN_APPS } from "@/lib/apps";
 import { PageBody, PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/components/ui/cn";
+import { AppIcon } from "@/components/app-icon";
 
 export const metadata: Metadata = { title: "Apps" };
 
@@ -36,7 +36,9 @@ export default async function AppsPage() {
             return (
               <li key={app.slug}>
                 <Link href={`/apps/${app.slug}`} className="card group block h-full overflow-hidden transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-brand-600">
-                  <div className={cn("h-24 bg-gradient-to-br", app.color, status !== "ready" && "opacity-50 grayscale")} aria-hidden="true" />
+                  <div className="flex h-24 items-center justify-center bg-neutral-50">
+                    <AppIcon spec={app.icon} size="lg" dimmed={status !== "ready"} />
+                  </div>
                   <div className="p-4">
                     <p className="flex items-center justify-between gap-2 font-medium">
                       {app.name}
@@ -61,8 +63,8 @@ export default async function AppsPage() {
               {ADMIN_APPS.map((app) => (
                 <li key={app.slug}>
                   <Link href={app.href} className="card group block h-full overflow-hidden transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-brand-600">
-                    <div className={cn("flex h-24 items-end bg-gradient-to-br p-3 font-mono text-xs text-green-400", app.color)} aria-hidden="true">
-                      $ tail -f garwin.log_
+                    <div className="flex h-24 items-center justify-center bg-neutral-50">
+                      <AppIcon spec={app.icon} size="lg" />
                     </div>
                     <div className="p-4">
                       <p className="flex items-center justify-between gap-2 font-medium">

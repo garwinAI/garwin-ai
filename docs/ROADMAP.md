@@ -19,7 +19,9 @@
 - Workspace widgets/themes can be dragged, moved, resized, customized. Pages menu: add, remove,
   duplicate, delete, reorder tabs.
 - Developers apply; Admin approves/denies. Approved developers submit items and set prices.
-- 15% commission on eligible marketplace sales. One-time upload fees: app $39.99, theme $29.99, widget $19.99.
+- 15% commission on eligible marketplace sales. Upload fees: app/tool $39.99, theme $29.99, widget $19.99 for a new listing; $9.99 per newer version. Charged only when Admin approves; denied uploads are never charged.
+- Base apps: Assistant, Messages, Calendar, Storage, Contacts on every plan; Wordbase, Codebase, Spreadsheets on paid plans. Everything else is subscribed to in AppZone.
+- Icons (owner spec, `src/lib/app-icons.ts`): one icon per app everywhere; drives = drive glyph, no background; themes = snapshot on the accent color; widgets = grey with white writing. Names of apps, widgets, themes, drives and the logo are fixed; page and column names are editable.
 - Admin manages members, plans, prices, apps, marketplace, developer applications, support,
   Assistant API, Stripe settings, analytics, system health.
 - Health: Green = online; Light green = online with payments unconfigured or tickets > 24h;
@@ -43,8 +45,8 @@
 | 1.6 | Deploy to dev.garwinai.com (Vercel + Neon + Resend), CSP header, data retention jobs | Next |
 | 2 | Billing: Admin-set prices, Stripe Checkout (monthly/yearly), in-app plan switching, customer portal, signed idempotent webhooks, payments ledger | ✅ Done (needs Stripe keys: README) |
 | 3 | Core apps: Storage (R2, shared quota, permissions, mark-for-deletion), Calendar, Contacts, Messages, notifications, teams | |
-| 4 | Workspace: draggable/resizable widgets, themes, Pages menu | |
-| 5 | AppZone: marketplace, download limits, developer applications, sandbox origin, upload fees, Stripe Connect commission | |
+| 4 | Workspace: draggable/resizable widgets, themes, Pages menu | Mostly done: `/workspace` with 1–3 columns (minimize, duplicate, resize, rename), built-in widgets (Clock, Notes, To-do, Storage, Quick links), pages (add, duplicate, copy/paste, Pages menu), per-page themes (Garwin Blue default + 4 more, revert to last/default), app icon order, search bar + Apps/Widgets/Page buttons, confirm before adding. |
+| 5 | AppZone: marketplace, download limits, developer applications, sandbox origin, upload fees, Stripe Connect commission | In progress: developer applications, uploads (icon, title, description, monthly/yearly price, main + gallery images, type, main color, copyright, support/website/privacy, version, .zip package), Admin approve/deny, listing fee or $9.99 per newer version charged only on approval, listings. Next: subscribing, sandbox origin, Stripe Connect payouts. |
 | 6 | Admin: members, support tickets, audited support access, analytics, real health checks | Mostly done: members list and statuses, remote view (user-approved), Console, support tickets with Auto Pilot, dashboard widgets (revenue, upgrades, server). Analytics next. |
 | 7 | Assistant: AI provider integration | |
 

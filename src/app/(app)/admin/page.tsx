@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { after } from "next/server";
-import { Bell, Bot, CalendarDays, LifeBuoy, ListChecks, MessageSquare, Rocket, Server, SquareTerminal, Tag, Eye, TrendingUp } from "lucide-react";
+import { Bell, Bot, Store, CalendarDays, LifeBuoy, ListChecks, MessageSquare, Rocket, Server, SquareTerminal, Tag, Eye, TrendingUp } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import { HEALTH_STYLES } from "@/lib/health";
 import { PLAN_ORDER, PLAN_SPEC } from "@/lib/plans";
@@ -38,7 +38,6 @@ import { UpdateAppButton } from "./update-app";
 export const metadata: Metadata = { title: "Admin" };
 
 const UPCOMING = [
-  { name: "Developer applications", phase: 5 },
   { name: "Analytics", phase: 6 },
 ];
 
@@ -354,6 +353,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               <li><Link className="flex items-center gap-2 text-brand-700 hover:underline" href="/admin/billing"><Tag className="h-4 w-4" aria-hidden="true" />Plans &amp; prices</Link></li>
               <li><Link className="flex items-center gap-2 text-brand-700 hover:underline" href="/admin/billing#stripe-title"><Tag className="h-4 w-4" aria-hidden="true" />Stripe settings</Link></li>
               <li><Link className="flex items-center gap-2 text-brand-700 hover:underline" href="/admin/assistant"><Bot className="h-4 w-4" aria-hidden="true" />Admin Assistant</Link></li>
+              <li><Link className="flex items-center gap-2 text-brand-700 hover:underline" href="/admin/appzone"><Store className="h-4 w-4" aria-hidden="true" />AppZone review &amp; developers</Link></li>
               {UPCOMING.map((t) => (
                 <li key={t.name} className="flex items-center justify-between gap-2 text-neutral-600">{t.name} <PlannedBadge phase={t.phase} /></li>
               ))}

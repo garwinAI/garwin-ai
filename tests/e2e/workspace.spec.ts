@@ -4,6 +4,7 @@ test("navigation follows the spec order", async ({ page }) => {
   await signUp(page);
   const labels = await page.getByRole("navigation", { name: "Main" }).getByRole("link").allInnerTexts();
   expect(labels.map((l) => l.trim())).toEqual([
+    "Workspace",
     "Assistant",
     "Messages",
     "Calendar",

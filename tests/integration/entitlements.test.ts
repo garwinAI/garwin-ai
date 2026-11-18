@@ -18,6 +18,7 @@ import {
   subscriptions,
   supportAccessGrants,
   uploadFees,
+  appzoneItemVersions,
   users,
   type Permission,
 } from "@/db/schema";
@@ -73,6 +74,7 @@ async function item(opts: { priceCents?: number; status?: "published" | "draft" 
       name: "Widget",
       status,
       priceCents: opts.priceCents ?? 0,
+      yearlyPriceCents: (opts.priceCents ?? 0) * 10,
       publishedAt: status === "published" ? new Date() : null,
     })
     .returning();
@@ -371,11 +373,21 @@ describe("database constraints on money", () => {
     );
   });
 
-  it("upload fees must match the item kind", async () => {
+  it("listing fees must match the item kind, one per item", async () => {
     const devProfile = await developer();
     const w = await item();
-    await expectDbError(db.insert(uploadFees).values({ developerId: devProfile, itemId: w.id, kind: "widget", amountCents: 3999 }), "upload_fees_amount_matches_kind");
+    await expectDbError(db.insert(uploadFees).values({ developerId: devProfile, itemId: w.id, kind: "widget", amountCents: 3999 }), "upload_fees_amount_matches_purpose");
     await db.insert(uploadFees).values({ developerId: devProfile, itemId: w.id, kind: "widget", amountCents: 1999 });
+    await expectDbError(db.insert(uploadFees).values({ developerId: devProfile, itemId: w.id, kind: "widget", amountCents: 1999 }), "upload_fees_one_listing_idx");
+  });
+
+  it("update fees are $9.99 and need a version", async () => {
+    const devProfile = await developer();
+    const w = await item();
+    await expectDbError(db.insert(uploadFees).values({ developerId: devProfile, itemId: w.id, kind: "widget", purpose: "update", amountCents: 999 }), "upload_fees_update_has_version");
+    const [v] = await db.insert(appzoneItemVersions).values({ itemId: w.id, version: "1.1.0", manifest: {} }).returning();
+    await expectDbError(db.insert(uploadFees).values({ developerId: devProfile, itemId: w.id, versionId: v.id, kind: "widget", purpose: "update", amountCents: 1999 }), "upload_fees_amount_matches_purpose");
+    await db.insert(uploadFees).values({ developerId: devProfile, itemId: w.id, versionId: v.id, kind: "widget", purpose: "update", amountCents: 999 });
   });
 
   it("item prices are free or at least $0.99", async () => {

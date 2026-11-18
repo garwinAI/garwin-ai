@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DRIVE_ICON, type AppIconSpec } from "./app-icons";
 
 /** A setting an app exposes in Settings → Apps → [app] → Settings. */
 export type AppSettingField = {
@@ -26,7 +27,8 @@ export type BuiltInApp = {
   /** Assistant must always stay reachable (spec), so it cannot be deactivated */
   canDeactivate: boolean;
   settings?: AppSettingsDefinition;
-  color: string; // gradient used for the hero image placeholder
+  /** Icon tile, same everywhere the app appears (see src/lib/app-icons.ts) */
+  icon: AppIconSpec;
 };
 
 export const calendarSettingsSchema = z.object({
@@ -42,7 +44,7 @@ export const BUILT_IN_APPS: BuiltInApp[] = [
     description: "Ask questions, draft content and get things done across your workspace. Always one click away from the floating button.",
     href: "/assistant",
     canDeactivate: false,
-    color: "from-orange-400 to-orange-600",
+    icon: { glyph: "assistant", bg: "#f97316" },
   },
   {
     slug: "storage",
@@ -51,7 +53,7 @@ export const BUILT_IN_APPS: BuiltInApp[] = [
     description: "Upload, organize and share files. Your team shares your plan's storage, and only you can permanently delete.",
     href: "/storage",
     canDeactivate: true,
-    color: "from-neutral-500 to-neutral-800",
+    icon: DRIVE_ICON,
   },
   {
     slug: "calendar",
@@ -74,7 +76,7 @@ export const BUILT_IN_APPS: BuiltInApp[] = [
         },
       ],
     },
-    color: "from-blue-400 to-blue-700",
+    icon: { glyph: "calendar", bg: "#dc2626" },
   },
   {
     slug: "messages",
@@ -83,7 +85,7 @@ export const BUILT_IN_APPS: BuiltInApp[] = [
     description: "Talk with your team members and Garwin AI support, with notifications and tickets.",
     href: "/messages",
     canDeactivate: true,
-    color: "from-sky-400 to-blue-600",
+    icon: { glyph: "messages", bg: "#0284c7" },
   },
   {
     slug: "contacts",
@@ -92,11 +94,11 @@ export const BUILT_IN_APPS: BuiltInApp[] = [
     description: "Keep the people you work with organized in one place.",
     href: "/contacts",
     canDeactivate: true,
-    color: "from-neutral-400 to-neutral-600",
+    icon: { glyph: "contacts", bg: "#525252" },
   },
-  { slug: "wordbase", name: "Wordbase", tagline: "Documents, written with AI.", description: "Write and format documents with the Assistant built in.", href: null, canDeactivate: true, color: "from-blue-500 to-indigo-700" },
-  { slug: "codebase", name: "Codebase", tagline: "Code with an AI pair.", description: "Write, organize and run code snippets with AI help.", href: null, canDeactivate: true, color: "from-neutral-700 to-neutral-950" },
-  { slug: "spreadsheets", name: "Spreadsheets", tagline: "Numbers, made easy.", description: "Build spreadsheets with formulas and let the Assistant analyze them.", href: null, canDeactivate: true, color: "from-orange-300 to-amber-600" },
+  { slug: "wordbase", name: "Wordbase", tagline: "Documents, written with AI.", description: "Write and format documents with the Assistant built in.", href: null, canDeactivate: true, icon: { glyph: "letter", bg: "#2563eb" } },
+  { slug: "codebase", name: "Codebase", tagline: "Code with an AI pair.", description: "Write, organize and run code snippets with AI help.", href: null, canDeactivate: true, icon: { glyph: "terminal", bg: "#000000" } },
+  { slug: "spreadsheets", name: "Spreadsheets", tagline: "Numbers, made easy.", description: "Build spreadsheets with formulas and let the Assistant analyze them.", href: null, canDeactivate: true, icon: { glyph: "spreadsheet", bg: "#b08d57" } },
 ];
 
 /**
@@ -109,7 +111,7 @@ export const ADMIN_APPS = [
     name: "Console",
     tagline: "Live log of everything happening on Garwin AI.",
     href: "/console",
-    color: "from-neutral-800 to-black",
+    icon: { glyph: "terminal", bg: "#000000" } as AppIconSpec,
   },
 ] as const;
 

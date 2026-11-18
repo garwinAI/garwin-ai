@@ -15,6 +15,8 @@ import { NoAccess } from "@/components/no-access";
 import { LocalTime } from "@/components/ui/local-time";
 import { cn } from "@/components/ui/cn";
 import { CreateFolderForm, ItemActions } from "./storage-forms";
+import { AppIcon } from "@/components/app-icon";
+import { DRIVE_ICON } from "@/lib/app-icons";
 
 export const metadata: Metadata = { title: "Storage" };
 
@@ -63,8 +65,10 @@ export default async function StoragePage({ searchParams }: Props) {
       />
       <PageBody>
         <Card className="p-5">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="font-medium">Storage used</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-2 font-medium">
+              <AppIcon spec={DRIVE_ICON} size="sm" /> {ent.isTeamMember ? "Team drive" : "My drive"}
+            </p>
             <p className="text-sm text-neutral-500">
               <span className="font-medium text-neutral-900">{formatBytes(usage.storageUsedBytes)}</span> of {ent.plan.storageGb} GB ({ent.plan.name}
               {ent.isTeamMember ? ", shared with your team" : ""})

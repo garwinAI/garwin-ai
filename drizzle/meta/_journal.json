@@ -85,6 +85,20 @@
       "when": 1794614197120,
       "tag": "0011_support_autopilot",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794958055106,
+      "tag": "0012_appzone_uploads",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794958571448,
+      "tag": "0013_workspace_layouts",
+      "breakpoints": true
     }
   ]
 }

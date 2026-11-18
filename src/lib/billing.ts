@@ -72,4 +72,6 @@ export const STRIPE_WEBHOOK_EVENTS = [
   "customer.subscription.resumed",
   "invoice.paid",
   "invoice.payment_failed",
+  // AppZone upload fees (charged when Admin approves an upload)
+  "payment_intent.succeeded",
 ] as const;

@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, LogOut, LifeBuoy } from "lucide-react";
+import { Bell, Files, LogOut, LifeBuoy } from "lucide-react";
 import { logOut } from "@/lib/auth/actions";
 import { cn } from "@/components/ui/cn";
 import { isActivePath, type NavItem } from "./nav";
 
 export type ShellUser = { name: string; email: string; planName: string };
+export type WorkspacePageLink = { id: string; name: string };
 
 /** Navigation list + account footer. Shared by the desktop sidebar and the mobile drawer. */
 export function SidebarNav({
@@ -16,7 +17,9 @@ export function SidebarNav({
   unread = 0,
   collapsed = false,
   onNavigate,
+  pages = [],
 }: {
+  pages?: WorkspacePageLink[];
   items: NavItem[];
   user: ShellUser;
   /** Unread notification count shown on the Notifications link */
@@ -50,6 +53,33 @@ export function SidebarNav({
                   {/* Label stays in the DOM when collapsed so screen readers still announce it. */}
                   <span className={collapsed ? "sr-only" : "truncate"}>{item.label}</span>
                 </Link>
+                {item.href === "/workspace" && pages.length > 1 && (
+                  <div className="mt-0.5">
+                    <Link
+                      href="/workspace"
+                      onClick={onNavigate}
+                      title={collapsed ? "Pages" : undefined}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-brand-600",
+                        collapsed && "justify-center",
+                      )}
+                    >
+                      <Files className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                      <span className={collapsed ? "sr-only" : "truncate"}>Pages</span>
+                    </Link>
+                    {!collapsed && (
+                      <ul className="ml-5 space-y-0.5 border-l border-neutral-200 pl-2" aria-label="Pages">
+                        {pages.map((p) => (
+                          <li key={p.id}>
+                            <Link href={`/workspace?page=${p.id}`} onClick={onNavigate} className="block truncate rounded-md px-2 py-1 text-sm text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900">
+                              {p.name || "Untitled"}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
               </li>
             );
           })}

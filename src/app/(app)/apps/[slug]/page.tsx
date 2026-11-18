@@ -7,6 +7,7 @@ import { getBuiltInApp } from "@/lib/apps";
 import { getEntitlements } from "@/server/services/entitlements";
 import { getInstalledApp } from "@/server/services/apps";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { AppIcon } from "@/components/app-icon";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -66,7 +67,9 @@ export default async function AppDetailPage({ params }: Props) {
           </p>
           <div className="mt-8">{action}</div>
         </div>
-        <div className={`order-1 min-h-48 bg-gradient-to-br ${app.color} sm:min-h-72 lg:order-2 lg:min-h-[420px]`} role="img" aria-label={`${app.name} preview image`} />
+        <div className="order-1 flex min-h-48 items-center justify-center bg-neutral-50 sm:min-h-72 lg:order-2 lg:min-h-[420px]">
+          <AppIcon spec={app.icon} size="xl" />
+        </div>
       </article>
     </div>
   );

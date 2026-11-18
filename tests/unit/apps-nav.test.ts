@@ -27,13 +27,13 @@ describe("built-in apps", () => {
 describe("navigation", () => {
   it("follows the spec order", () => {
     expect(MAIN_NAV.map((i) => i.label)).toEqual([
-      "Assistant", "Messages", "Calendar", "Apps", "Go to AppZone", "Contacts", "Storage", "Settings",
+      "Workspace", "Assistant", "Messages", "Calendar", "Apps", "Go to AppZone", "Contacts", "Storage", "Settings",
     ]);
   });
 
   it("hides deactivated apps but always keeps Apps, AppZone and Settings", () => {
     const labels = visibleNav(["assistant", "messages"], false).map((i) => i.label);
-    expect(labels).toEqual(["Assistant", "Messages", "Apps", "Go to AppZone", "Settings"]);
+    expect(labels).toEqual(["Workspace", "Assistant", "Messages", "Apps", "Go to AppZone", "Settings"]);
   });
 
   it("adds Admin only for admins", () => {

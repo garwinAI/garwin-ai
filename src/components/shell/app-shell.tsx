@@ -8,6 +8,7 @@ import { Drawer } from "@/components/ui/drawer";
 import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/components/ui/cn";
 import { SIDEBAR_COOKIE, visibleNav } from "./nav";
+import type { WorkspacePageLink } from "./sidebar";
 import { SidebarNav, type ShellUser } from "./sidebar";
 import { WorkspaceSwitcher, type Workspace } from "./workspace-switcher";
 
@@ -25,6 +26,7 @@ export function AppShell({
   user,
   unreadNotifications,
   initialCollapsed,
+  pages = [],
   children,
 }: {
   /** Slugs of active apps; their nav items are shown */
@@ -36,6 +38,8 @@ export function AppShell({
   user: ShellUser;
   unreadNotifications: number;
   initialCollapsed: boolean;
+  /** Workspace pages; a "Pages" menu appears once there's more than one */
+  pages?: WorkspacePageLink[];
   children: ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -70,7 +74,7 @@ export function AppShell({
           <Logo />
         </div>
         {switcher}
-        <SidebarNav items={items} user={user} unread={unreadNotifications} onNavigate={() => setDrawerOpen(false)} />
+        <SidebarNav pages={pages} items={items} user={user} unread={unreadNotifications} onNavigate={() => setDrawerOpen(false)} />
       </Drawer>
 
       {/* Desktop sidebar */}
@@ -93,7 +97,7 @@ export function AppShell({
           </div>
         )}
         {!collapsed && switcher}
-        <SidebarNav items={items} user={user} unread={unreadNotifications} collapsed={collapsed} />
+        <SidebarNav pages={pages} items={items} user={user} unread={unreadNotifications} collapsed={collapsed} />
       </aside>
 
       <main id="main" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">

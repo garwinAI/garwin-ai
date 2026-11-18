@@ -265,7 +265,7 @@ the live site only at launch. Every step works from a phone browser.
 2. **Developers → API keys** → reveal and copy the **Secret key** (`sk_test_...`).
 3. **Developers → Webhooks → Add destination** → "Your account" → select the events listed in
    Admin → Billing (`checkout.session.completed`, the `customer.subscription.*` events,
-   `invoice.paid`, `invoice.payment_failed`) → Webhook endpoint → URL
+   `invoice.paid`, `invoice.payment_failed`, `payment_intent.succeeded` for AppZone upload fees) → Webhook endpoint → URL
    `https://dev.garwinai.com/api/stripe/webhook` → create. Open it and reveal the **Signing secret** (`whsec_...`).
 4. **Settings → Billing → Customer portal** → allow customers to update payment methods, view
    invoices and cancel subscriptions → **Save**. (Plan switching happens in Garwin AI, so leave

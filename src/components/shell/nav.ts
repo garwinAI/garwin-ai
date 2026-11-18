@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   HardDrive,
+  LayoutDashboard,
   LayoutGrid,
   MessageSquare,
   Settings,
@@ -24,6 +25,7 @@ export type NavItem = {
 
 // Order follows the product spec. Log Out is rendered separately at the bottom.
 export const MAIN_NAV: NavItem[] = [
+  { href: "/workspace", label: "Workspace", icon: LayoutDashboard },
   { href: "/assistant", label: "Assistant", icon: Sparkles, appSlug: "assistant" },
   { href: "/messages", label: "Messages", icon: MessageSquare, appSlug: "messages", permission: "messages.use" },
   { href: "/calendar", label: "Calendar", icon: CalendarDays, appSlug: "calendar", permission: "calendar.view" },
