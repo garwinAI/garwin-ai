@@ -11,6 +11,10 @@ import {
   mainColumnId,
   MAX_COLUMNS,
   moveApp,
+  movePage,
+  resetPage,
+  setDashboardView,
+  BUILT_IN_WIDGETS,
   moveWidget,
   normalizePageNames,
   parseLayout,
@@ -141,5 +145,48 @@ describe("saved layouts", () => {
     expect(parseLayout({ nonsense: true }, apps).pages).toHaveLength(1);
     const l = defaultLayout(apps);
     expect(layoutSchema.safeParse({ ...l, pages: [{ ...l.pages[0], columns: [...p.columns, ...p.columns] }] }).success).toBe(false);
+  });
+});
+
+describe("dashboard and defaults", () => {
+  it("comes with Clock, Weather, To-do, Messages, Notifications, Support and My Apps widgets", () => {
+    const names = BUILT_IN_WIDGETS.map((w) => w.name);
+    for (const n of ["Clock", "Weather", "To-do", "Messages", "Notifications", "Support", "My Apps"]) expect(names).toContain(n);
+    const types = defaultLayout(apps).pages[0].columns.flatMap((c) => c.widgets.map((w) => w.type));
+    expect(types).toEqual(expect.arrayContaining(["clock", "weather", "todo", "quick-links"]));
+  });
+
+  it("remembers the Messages / Notifications / Support view, defaulting to Notifications", () => {
+    const l = defaultLayout(apps);
+    expect(l.dashboardView).toBe("notifications");
+    const m = setDashboardView(l, "messages");
+    expect(parseLayout(JSON.parse(JSON.stringify(m)), apps).dashboardView).toBe("messages");
+    const { dashboardView: _, ...old } = l;
+    void _;
+    expect(parseLayout(old, apps).dashboardView).toBe("notifications");
+  });
+
+  it("moves pages and resets a page's layout, keeping its name and theme", () => {
+    let l = addPage(defaultLayout(apps)).layout;
+    const second = l.pages[1].id;
+    l = movePage(l, second, -1);
+    expect(l.pages[0].id).toBe(second);
+    expect(movePage(l, second, -1)).toBe(l);
+    l = setPageTheme(renamePage(l, second, "Work"), second, "plum");
+    l = resetPage(l, second);
+    expect(l.pages[0]).toMatchObject({ name: "Work", theme: "plum" });
+    expect(l.pages[0].columns.flatMap((c) => c.widgets).length).toBeGreaterThan(0);
+  });
+});
+
+import { describeWeather, toF, weatherKind } from "@/lib/weather";
+describe("weather", () => {
+  it("describes WMO codes and converts units", () => {
+    expect(describeWeather(0)).toBe("Clear");
+    expect(describeWeather(63)).toBe("Rain");
+    expect(weatherKind(95)).toBe("storm");
+    expect(weatherKind(73)).toBe("snow");
+    expect(toF(0)).toBe(32);
+    expect(toF(21.5)).toBe(71);
   });
 });

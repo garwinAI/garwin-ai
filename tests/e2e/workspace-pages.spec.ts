@@ -21,8 +21,15 @@ test("workspace: widgets need confirming, pages appear in the menu, themes are p
   await page.getByRole("button", { name: "Activate widget" }).click();
   await expect(page.getByRole("article", { name: "To-do widget" })).toHaveCount(2);
 
+  // Dashboard: Messages / Notifications / Support views switch and are remembered.
+  await page.getByRole("tab", { name: /Support/ }).click();
+  await expect(page.getByRole("tabpanel")).toContainText("No help requests");
+  await expect(page.getByText("All changes saved")).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("tab", { name: /Support/ })).toHaveAttribute("aria-selected", "true");
+
   // Pages: a new blank page shows up under Pages in the menu.
-  await page.getByRole("button", { name: "Page", exact: true }).click();
+  await page.getByRole("button", { name: "Page menu" }).click();
   await page.getByRole("button", { name: "Add new page", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Page 2" })).toBeVisible();
   await expect(page.getByText("All changes saved")).toBeVisible();
@@ -30,12 +37,11 @@ test("workspace: widgets need confirming, pages appear in the menu, themes are p
   await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Page 2" })).toBeVisible();
 
   // Themes: confirm, then revert to default.
-  await page.getByRole("button", { name: "Page", exact: true }).click();
-  await page.getByRole("button", { name: "Add new page theme" }).click();
+  await page.getByRole("button", { name: "Themes", exact: true }).click();
   await page.getByRole("button", { name: /^Forest/ }).click();
   await page.getByRole("button", { name: "Apply theme" }).click();
   await expect(page.getByText(/Forest theme/)).toBeVisible();
-  await page.getByRole("button", { name: "Page", exact: true }).click();
+  await page.getByRole("button", { name: "Themes", exact: true }).click();
   await page.getByRole("button", { name: "Revert to default" }).click();
   await expect(page.getByText(/Garwin Blue theme/)).toBeVisible();
 });

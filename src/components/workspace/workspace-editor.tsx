@@ -10,13 +10,17 @@ import {
   ArrowUp,
   Check,
   ChevronsLeftRight,
+  Bell,
   ClipboardCopy,
   ClipboardPaste,
   Columns3,
   Copy,
   FilePlus2,
-  Files,
+  Headset,
   LayoutGrid,
+  Mail,
+  MoreVertical,
+  Palette,
   Maximize2,
   Minimize2,
   MoreHorizontal,
@@ -53,6 +57,9 @@ import {
   normalizePageNames,
   pastePage,
   removePage,
+  movePage,
+  resetPage,
+  setDashboardView,
   renamePage,
   revertPageTheme,
   setPageTheme,
@@ -71,6 +78,7 @@ import {
 import { DEFAULT_THEME } from "@/lib/app-icons";
 import { saveLayoutAction } from "@/app/(app)/workspace/actions";
 import { toggleApp } from "@/app/(app)/settings/apps/actions";
+import { MessagesFeed, NotificationsFeed, SupportFeed, WeatherBody, type Feeds } from "./feeds";
 
 type AppLink = { slug: string; name: string; href: string; icon: AppIconSpec };
 /** Every base app with its state for the Apps panel. */
@@ -84,6 +92,7 @@ type Pending =
   | { kind: "remove-widget"; widgetId: string }
   | { kind: "remove-column"; columnId: string }
   | { kind: "remove-page"; pageId: string }
+  | { kind: "reset-page"; pageId: string }
   | { kind: "toggle-app"; slug: string; activate: boolean };
 
 const DRAG_MIME = "application/x-garwin";
@@ -92,6 +101,7 @@ type DragData = { kind: "new-widget"; type: WidgetType } | { kind: "theme"; slug
 const WIDTH_FR: Record<Column["width"], string> = { narrow: "1fr", normal: "1.5fr", wide: "2.25fr" };
 const WIDTH_LABEL: Record<Column["width"], string> = { narrow: "Narrow", normal: "Normal", wide: "Wide" };
 const SIZE_MIN_H: Record<WidgetInstance["size"], string> = { s: "min-h-24", m: "min-h-40", l: "min-h-72" };
+const FEED_LIMIT: Record<WidgetInstance["size"], number> = { s: 3, m: 5, l: 10 };
 
 function readDrag(e: React.DragEvent): DragData | null {
   try {
@@ -359,6 +369,7 @@ function WidgetCard({
   index,
   apps,
   storage,
+  feeds,
   onChange,
   onAsk,
   onMove,
@@ -370,6 +381,7 @@ function WidgetCard({
   index: number;
   apps: AppLink[];
   storage: StorageInfo;
+  feeds: Feeds;
   onChange: (patch: Partial<Pick<WidgetInstance, "size" | "minimized" | "settings">>) => void;
   onAsk: (p: Pending) => void;
   onMove: (toColumnId: string, toIndex: number) => void;
@@ -436,6 +448,10 @@ function WidgetCard({
           {widget.type === "todo" && <TodoBody widget={widget} onSettings={onSettings} />}
           {widget.type === "storage" && <StorageBody storage={storage} />}
           {widget.type === "quick-links" && <QuickLinksBody widget={widget} apps={apps} onSettings={onSettings} />}
+          {widget.type === "weather" && <WeatherBody widget={widget} onSettings={onSettings} />}
+          {widget.type === "messages" && <MessagesFeed feeds={feeds} limit={FEED_LIMIT[widget.size]} />}
+          {widget.type === "notifications" && <NotificationsFeed feeds={feeds} limit={FEED_LIMIT[widget.size]} />}
+          {widget.type === "support" && <SupportFeed feeds={feeds} limit={FEED_LIMIT[widget.size]} />}
         </div>
       )}
     </article>
@@ -464,6 +480,7 @@ export function WorkspaceEditor({
   canManageApps,
   canManageBilling,
   storage,
+  feeds,
 }: {
   initial: WorkspaceLayout;
   initialPageId: string | null;
@@ -471,6 +488,7 @@ export function WorkspaceEditor({
   canManageApps: boolean;
   canManageBilling: boolean;
   storage: StorageInfo;
+  feeds: Feeds;
 }) {
   const router = useRouter();
   const [layout, setLayout] = useState(initial);
@@ -482,8 +500,7 @@ export function WorkspaceEditor({
     if (initialPageId) setPageId(initialPageId);
   }
   const [pending, setPending] = useState<Pending | null>(null);
-  const [panel, setPanel] = useState<"apps" | "widgets" | "page" | null>(null);
-  const [showThemes, setShowThemes] = useState(false);
+  const [panel, setPanel] = useState<"apps" | "widgets" | "themes" | "more" | null>(null);
   const [arranging, setArranging] = useState(false);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -579,11 +596,11 @@ export function WorkspaceEditor({
     if (p.kind === "add-widget") applyPage((pg) => addWidget(pg, p.columnId, p.type, p.index));
     if (p.kind === "theme") {
       apply((l) => setPageTheme(l, page.id, p.slug), { refresh: true });
-      setShowThemes(false);
       setPanel(null);
     }
     if (p.kind === "remove-widget") applyPage((pg) => removeWidget(pg, p.widgetId));
     if (p.kind === "remove-column") applyPage((pg) => removeColumn(pg, p.columnId));
+    if (p.kind === "reset-page") apply((l) => resetPage(l, p.pageId));
     if (p.kind === "remove-page") {
       const rest = layout.pages.filter((x) => x.id !== p.pageId);
       apply((l) => removePage(l, p.pageId), { refresh: true });
@@ -636,36 +653,55 @@ export function WorkspaceEditor({
     hits.push({ key: "appzone", label: `Search AppZone for "${query.trim()}"`, detail: "AppZone", href: `/appzone?q=${encodeURIComponent(query.trim())}` });
   }
 
+  const unreadMessages = feeds.conversations?.reduce((n, c) => n + c.unread, 0) ?? 0;
+  const openTickets = feeds.tickets.filter((t) => t.status === "open" || t.status === "pending").length;
+  const view = layout.dashboardView;
+  const DASH = [
+    { key: "messages" as const, label: "Messages", icon: Mail, count: unreadMessages, hidden: feeds.conversations === null },
+    { key: "notifications" as const, label: "Notifications", icon: Bell, count: feeds.unreadNotifications },
+    { key: "support" as const, label: "Support", icon: Headset, count: openTickets },
+  ].filter((d) => !d.hidden);
+
   const toolbar = (
-    <div className="relative space-y-2">
-      <form role="search" onSubmit={(e) => e.preventDefault()} className="relative">
-        <label htmlFor="workspace-search" className="sr-only">Search apps, pages and widgets</label>
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" aria-hidden="true" />
-        <input id="workspace-search" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search apps, pages, notes…" className="input pl-9" autoComplete="off" />
-        {hits.length > 0 && (
-          <ul className="card absolute inset-x-0 top-full z-40 mt-1 max-h-80 overflow-y-auto p-1 shadow-xl" aria-label="Search results">
-            {hits.slice(0, 12).map((h) => (
-              <li key={h.key}>
-                {h.href ? (
-                  <Link href={h.href} className="flex flex-col rounded-lg px-3 py-2 text-sm hover:bg-neutral-100">
-                    <span className="font-medium">{h.label}</span>
-                    <span className="text-xs text-neutral-500">{h.detail}</span>
-                  </Link>
-                ) : (
-                  <button type="button" onClick={() => { goToPage(h.pageId!); setQuery(""); }} className="flex w-full flex-col rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-100">
-                    <span className="font-medium">{h.label}</span>
-                    <span className="text-xs text-neutral-500">{h.detail}</span>
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </form>
-      <div className="flex gap-2">
+    <div className="relative space-y-3">
+      <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
+        <form role="search" onSubmit={(e) => e.preventDefault()} className="relative min-w-0 basis-full lg:basis-auto lg:flex-1">
+          <label htmlFor="workspace-search" className="sr-only">Search apps, pages and widgets</label>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" aria-hidden="true" />
+          <input id="workspace-search" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search apps, pages, notes…" className="input pl-9" autoComplete="off" />
+          {hits.length > 0 && (
+            <ul className="card absolute inset-x-0 top-full z-40 mt-1 max-h-80 overflow-y-auto p-1 shadow-xl" aria-label="Search results">
+              {hits.slice(0, 12).map((h) => (
+                <li key={h.key}>
+                  {h.href ? (
+                    <Link href={h.href} className="flex flex-col rounded-lg px-3 py-2 text-sm hover:bg-neutral-100">
+                      <span className="font-medium">{h.label}</span>
+                      <span className="text-xs text-neutral-500">{h.detail}</span>
+                    </Link>
+                  ) : (
+                    <button type="button" onClick={() => { goToPage(h.pageId!); setQuery(""); }} className="flex w-full flex-col rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-100">
+                      <span className="font-medium">{h.label}</span>
+                      <span className="text-xs text-neutral-500">{h.detail}</span>
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </form>
         <ToolButton icon={LayoutGrid} label="Apps" open={panel === "apps"} onClick={() => setPanel(panel === "apps" ? null : "apps")} />
         <ToolButton icon={PanelsTopLeft} label="Widgets" open={panel === "widgets"} onClick={() => setPanel(panel === "widgets" ? null : "widgets")} />
-        <ToolButton icon={Files} label="Page" open={panel === "page"} onClick={() => { setPanel(panel === "page" ? null : "page"); setShowThemes(false); }} />
+        <ToolButton icon={Palette} label="Themes" open={panel === "themes"} onClick={() => setPanel(panel === "themes" ? null : "themes")} />
+        <button
+          type="button"
+          aria-label="Page menu"
+          title="Page menu"
+          aria-expanded={panel === "more"}
+          onClick={() => setPanel(panel === "more" ? null : "more")}
+          className={cn("inline-flex h-11 w-8 shrink-0 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-200 focus-visible:outline-2 focus-visible:outline-brand-600", panel === "more" && "bg-neutral-200")}
+        >
+          <MoreVertical className="h-5 w-5" aria-hidden="true" />
+        </button>
       </div>
 
       {panel === "apps" && (
@@ -722,8 +758,73 @@ export function WorkspaceEditor({
         </Picker>
       )}
 
-      {panel === "page" && (
-        <Picker title="Page" onClose={() => setPanel(null)}>
+      {panel === "themes" && (
+        <Picker title="Page themes" hint="Drag a theme onto the page, or tap one. You'll confirm first. Each page keeps its own theme." onClose={() => setPanel(null)}>
+          <div className="flex items-center gap-3 rounded-lg bg-neutral-50 p-2">
+            <ThemeIcon accent={theme.accent} size="md" />
+            <div className="min-w-0 text-sm">
+              <p className="font-medium">{theme.name}</p>
+              <p className="text-xs text-neutral-500">Current theme on {page.name || "this page"} · {theme.layout} layout</p>
+            </div>
+          </div>
+          <div className="mt-1 grid grid-cols-2 gap-1">
+            <MenuButton
+              icon={Undo2}
+              label="Revert to last"
+              disabled={!page.previousTheme || page.previousTheme === page.theme}
+              hint={page.previousTheme ? `Back to ${getTheme(page.previousTheme).name}` : "No earlier theme"}
+              onClick={() => apply((l) => revertPageTheme(l, page.id, "last"), { refresh: true })}
+            />
+            <MenuButton icon={RotateCcw} label="Revert to default" disabled={page.theme === DEFAULT_THEME.slug} onClick={() => apply((l) => revertPageTheme(l, page.id, "default"), { refresh: true })} />
+          </div>
+          <PanelHeading>Add a page theme</PanelHeading>
+          <ul className="grid grid-cols-2 gap-2">
+            {BUILT_IN_THEMES.map((t) => (
+              <li key={t.slug}>
+                <button
+                  type="button"
+                  draggable
+                  onDragStart={(e) => setDrag(e, { kind: "theme", slug: t.slug })}
+                  onClick={() => t.slug !== page.theme && setPending({ kind: "theme", slug: t.slug })}
+                  aria-current={t.slug === page.theme ? "true" : undefined}
+                  className={cn("flex w-full items-center gap-2 rounded-lg border p-2 text-left text-sm hover:bg-neutral-50", t.slug === page.theme ? "border-neutral-900" : "border-neutral-200")}
+                >
+                  <ThemeIcon accent={t.accent} size="md" />
+                  <span className="min-w-0">
+                    <span className="block font-medium">{t.name}</span>
+                    <span className="block text-xs text-neutral-500">{t.slug === page.theme ? "In use" : "Standard layout"}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-neutral-500">More themes come from <Link href="/appzone" className="text-brand-700 hover:underline">AppZone</Link>.</p>
+        </Picker>
+      )}
+
+      {panel === "more" && (
+        <Picker title="Page menu" onClose={() => setPanel(null)}>
+          <PanelHeading>Pages</PanelHeading>
+          <ul className="space-y-0.5">
+            {layout.pages.map((p, i) => (
+              <li key={p.id} className="flex items-center gap-1">
+                <button type="button" onClick={() => goToPage(p.id)} aria-current={p.id === page.id ? "page" : undefined} className={cn("flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm", p.id === page.id ? "bg-neutral-100 font-medium" : "hover:bg-neutral-50")}>
+                  <ThemeIcon accent={getTheme(p.theme).accent} size="sm" />
+                  <span className="truncate">{p.name || "Untitled"}</span>
+                </button>
+                {p.id === page.id && layout.pages.length > 1 && (
+                  <>
+                    <SmallButton label={`Move ${p.name} earlier`} icon={ArrowUp} disabled={i === 0} onClick={() => apply((l) => movePage(l, p.id, -1), { refresh: true })} />
+                    <SmallButton label={`Move ${p.name} later`} icon={ArrowDown} disabled={i === layout.pages.length - 1} onClick={() => apply((l) => movePage(l, p.id, 1), { refresh: true })} />
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-2">
+            <label htmlFor="page-name" className="label">Rename this page</label>
+            <input id="page-name" className="input" maxLength={40} value={page.name} onChange={(e) => apply((l) => renamePage(l, page.id, e.target.value), { refresh: true })} />
+          </div>
           <PanelHeading>This page</PanelHeading>
           <div className="grid grid-cols-2 gap-1">
             <MenuButton icon={FilePlus2} label="Add new page" onClick={() => addPageAndGo(addPage(latest.current), "Blank page added.")} />
@@ -743,77 +844,39 @@ export function WorkspaceEditor({
             />
             <MenuButton icon={ClipboardPaste} label="Paste" disabled={!clipboard} hint={clipboard ? undefined : "Copy a page first"} onClick={() => clipboard && addPageAndGo(pastePage(latest.current, clipboard, page.id), "Pasted as a new page.")} />
             <MenuButton icon={Columns3} label="Add column" disabled={page.columns.length >= MAX_COLUMNS} hint={page.columns.length >= MAX_COLUMNS ? "Up to 3 columns" : undefined} onClick={() => applyPage(addColumn)} />
+            <MenuButton icon={Maximize2} label="Expand all" onClick={() => applyPage((pg) => ({ ...pg, columns: pg.columns.map((c) => ({ ...c, minimized: false, widgets: c.widgets.map((w) => ({ ...w, minimized: false })) })) }))} />
+            <MenuButton icon={RotateCcw} label="Reset layout" onClick={() => setPending({ kind: "reset-page", pageId: page.id })} />
             <MenuButton icon={Trash2} label="Delete page" disabled={layout.pages.length <= 1} onClick={() => setPending({ kind: "remove-page", pageId: page.id })} />
           </div>
-          <div className="mt-2">
-            <label htmlFor="page-name" className="label">Page name</label>
-            <input
-              id="page-name"
-              className="input"
-              maxLength={40}
-              value={page.name}
-              onChange={(e) => apply((l) => renamePage(l, page.id, e.target.value), { refresh: true })}
-            />
-          </div>
-
-          <PanelHeading>Pages</PanelHeading>
-          <ul className="space-y-0.5">
-            {layout.pages.map((p) => (
-              <li key={p.id}>
-                <button type="button" onClick={() => goToPage(p.id)} aria-current={p.id === page.id ? "page" : undefined} className={cn("flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm", p.id === page.id ? "bg-neutral-100 font-medium" : "hover:bg-neutral-50")}>
-                  <ThemeIcon accent={getTheme(p.theme).accent} size="sm" />
-                  <span className="truncate">{p.name || "Untitled"}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-
-          <PanelHeading>Page themes</PanelHeading>
-          <div className="flex items-center gap-3 rounded-lg bg-neutral-50 p-2">
-            <ThemeIcon accent={theme.accent} size="md" />
-            <div className="min-w-0 text-sm">
-              <p className="font-medium">{theme.name}</p>
-              <p className="text-xs text-neutral-500">Current theme · {theme.layout} layout</p>
-            </div>
-          </div>
-          <div className="mt-1 grid grid-cols-1 gap-1 sm:grid-cols-3">
-            <MenuButton icon={Plus} label="Add new page theme" onClick={() => setShowThemes(!showThemes)} />
-            <MenuButton
-              icon={Undo2}
-              label="Revert to last"
-              disabled={!page.previousTheme || page.previousTheme === page.theme}
-              hint={page.previousTheme ? `Back to ${getTheme(page.previousTheme).name}` : "No earlier theme"}
-              onClick={() => apply((l) => revertPageTheme(l, page.id, "last"), { refresh: true })}
-            />
-            <MenuButton icon={RotateCcw} label="Revert to default" disabled={page.theme === DEFAULT_THEME.slug} onClick={() => apply((l) => revertPageTheme(l, page.id, "default"), { refresh: true })} />
-          </div>
-          {showThemes && (
-            <div className="mt-2 space-y-2">
-              <p className="text-xs text-neutral-500">Drag a theme onto the page, or tap one. You&apos;ll confirm first.</p>
-              <ul className="grid grid-cols-2 gap-2">
-                {BUILT_IN_THEMES.map((t) => (
-                  <li key={t.slug}>
-                    <button
-                      type="button"
-                      draggable
-                      onDragStart={(e) => setDrag(e, { kind: "theme", slug: t.slug })}
-                      onClick={() => t.slug !== page.theme && setPending({ kind: "theme", slug: t.slug })}
-                      aria-current={t.slug === page.theme ? "true" : undefined}
-                      className={cn("flex w-full items-center gap-2 rounded-lg border p-2 text-left text-sm hover:bg-neutral-50", t.slug === page.theme ? "border-neutral-900" : "border-neutral-200")}
-                    >
-                      <ThemeIcon accent={t.accent} size="md" />
-                      <span className="min-w-0">
-                        <span className="block font-medium">{t.name}</span>
-                        <span className="block text-xs text-neutral-500">{t.slug === page.theme ? "In use" : "Standard layout"}</span>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-xs text-neutral-500">More themes come from <Link href="/appzone" className="text-brand-700 hover:underline">AppZone</Link>.</p>
-            </div>
-          )}
         </Picker>
+      )}
+
+      {/* Messages / Notifications / Support: icons with no background, and the chosen one's view below (remembered). */}
+      <div className="flex items-center gap-1 border-t border-neutral-200 pt-2" role="tablist" aria-label="Dashboard">
+        {DASH.map((d) => (
+          <button
+            key={d.key}
+            type="button"
+            role="tab"
+            aria-selected={view === d.key}
+            aria-controls={view === d.key ? "dashboard-view" : undefined}
+            onClick={() => apply((l) => setDashboardView(l, view === d.key ? "none" : d.key))}
+            title={d.label}
+            className={cn("relative inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-brand-600", view === d.key ? "font-medium text-neutral-900" : "text-neutral-500")}
+          >
+            <d.icon className="h-5 w-5" aria-hidden="true" />
+            <span className="max-sm:sr-only">{d.label}</span>
+            {d.count > 0 && <span className="rounded-full bg-accent-500 px-1.5 text-[11px] font-semibold text-neutral-900">{d.count > 99 ? "99+" : d.count}<span className="sr-only"> new</span></span>}
+            {view === d.key && <span className="absolute inset-x-2 -bottom-[9px] h-0.5 rounded-full bg-brand-600" aria-hidden="true" />}
+          </button>
+        ))}
+      </div>
+      {view !== "none" && DASH.some((d) => d.key === view) && (
+        <div id="dashboard-view" role="tabpanel" className="card p-3">
+          {view === "messages" && <MessagesFeed feeds={feeds} limit={5} />}
+          {view === "notifications" && <NotificationsFeed feeds={feeds} limit={5} />}
+          {view === "support" && <SupportFeed feeds={feeds} limit={5} />}
+        </div>
       )}
     </div>
   );
@@ -961,6 +1024,7 @@ export function WorkspaceEditor({
                     index={wi}
                     apps={orderedApps}
                     storage={storage}
+                    feeds={feeds}
                     onChange={(patch) => applyPage((pg) => updateWidget(pg, w.id, patch))}
                     onAsk={setPending}
                     onMove={(to, idx) => applyPage((pg) => moveWidget(pg, w.id, to, idx))}
@@ -1031,6 +1095,8 @@ export function WorkspaceEditor({
               }
               case "remove-column":
                 return { title: `Remove ${colName(pending.columnId)}?`, confirmLabel: "Remove column", body: <p>The column and every widget in it are removed.</p> };
+              case "reset-page":
+                return { title: `Reset ${page.name || "this page"}?`, confirmLabel: "Reset layout", body: <p>Columns and widgets go back to the starting set. Notes and to-dos on this page are cleared. The name and theme stay.</p> };
               case "remove-page":
                 return { title: `Delete ${page.name || "this page"}?`, confirmLabel: "Delete page", body: <p>The page and all of its widgets are deleted.</p> };
               case "toggle-app": {

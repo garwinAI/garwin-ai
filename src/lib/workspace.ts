@@ -9,16 +9,20 @@ import { BUILT_IN_THEMES, DEFAULT_THEME } from "./app-icons";
 export const MAX_COLUMNS = 3;
 export const MAX_WIDGETS_PER_COLUMN = 12;
 
-export const WIDGET_TYPES = ["clock", "notes", "todo", "storage", "quick-links"] as const;
+export const WIDGET_TYPES = ["clock", "weather", "todo", "notes", "messages", "notifications", "support", "quick-links", "storage"] as const;
 export type WidgetType = (typeof WIDGET_TYPES)[number];
 
 /** Widgets that come with every workspace. Names are fixed; content and size are not. */
 export const BUILT_IN_WIDGETS: { type: WidgetType; name: string; description: string }[] = [
   { type: "clock", name: "Clock", description: "The time and date where you are." },
-  { type: "notes", name: "Notes", description: "A scratchpad that saves as you type." },
+  { type: "weather", name: "Weather", description: "Today's weather where you are." },
   { type: "todo", name: "To-do", description: "A simple checklist." },
+  { type: "notes", name: "Notes", description: "A scratchpad that saves as you type." },
+  { type: "messages", name: "Messages", description: "Your latest team chats." },
+  { type: "notifications", name: "Notifications", description: "What's new for you." },
+  { type: "support", name: "Support", description: "Your help requests and their status." },
+  { type: "quick-links", name: "My Apps", description: "Shortcuts to the apps you pick." },
   { type: "storage", name: "Storage", description: "How much of your drive is used." },
-  { type: "quick-links", name: "Quick links", description: "Shortcuts to the apps you pick." },
 ];
 
 export const widgetName = (type: WidgetType) => BUILT_IN_WIDGETS.find((w) => w.type === type)!.name;
@@ -35,6 +39,11 @@ export const widgetSettingsSchema = z.object({
   items: z.array(todoItem).max(50).optional(),
   apps: z.array(z.string().max(40)).max(12).optional(),
   hour12: z.boolean().optional(),
+  /** Weather: a city the person typed (otherwise their location is used) and the unit. */
+  city: z.string().trim().max(80).optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lon: z.number().min(-180).max(180).optional(),
+  unit: z.enum(["f", "c"]).optional(),
 });
 export type WidgetSettings = z.infer<typeof widgetSettingsSchema>;
 
@@ -70,10 +79,15 @@ const pageSchema = z.object({
 });
 export type WorkspacePage = z.infer<typeof pageSchema>;
 
+export const DASHBOARD_VIEWS = ["messages", "notifications", "support"] as const;
+export type DashboardView = (typeof DASHBOARD_VIEWS)[number] | "none";
+
 export const layoutSchema = z.object({
   version: z.literal(2),
   pages: z.array(pageSchema).min(1).max(MAX_PAGES),
   appOrder: z.array(z.string().max(40)).max(40),
+  /** Which panel shows under the Messages / Notifications / Support icons (remembered). */
+  dashboardView: z.enum([...DASHBOARD_VIEWS, "none"]).default("notifications"),
 });
 export type WorkspaceLayout = z.infer<typeof layoutSchema>;
 
@@ -96,7 +110,18 @@ export function newId() {
 }
 
 export function newWidget(type: WidgetType): WidgetInstance {
-  const settings: WidgetSettings = type === "notes" ? { text: "" } : type === "todo" ? { items: [] } : type === "quick-links" ? { apps: ["storage", "calendar", "messages"] } : type === "clock" ? { hour12: true } : {};
+  const settings: WidgetSettings =
+    type === "notes"
+      ? { text: "" }
+      : type === "todo"
+        ? { items: [] }
+        : type === "quick-links"
+          ? { apps: ["storage", "calendar", "messages", "wordbase", "spreadsheets", "codebase"] }
+          : type === "clock"
+            ? { hour12: true }
+            : type === "weather"
+              ? { unit: "f" }
+              : {};
   return { id: newId(), type, size: "m", minimized: false, settings };
 }
 
@@ -106,6 +131,7 @@ export function defaultLayout(appSlugs: string[]): WorkspaceLayout {
   return {
     version: 2,
     appOrder: appSlugs,
+    dashboardView: "notifications",
     pages: [
       {
         id: newId(),
@@ -113,8 +139,8 @@ export function defaultLayout(appSlugs: string[]): WorkspaceLayout {
         theme: DEFAULT_THEME.slug,
         previousTheme: null,
         columns: [
-          { id: newId(), label: "", width: "normal", minimized: false, widgets: [newWidget("clock"), newWidget("notes")] },
-          { id: newId(), label: "", width: "wide", minimized: false, widgets: [newWidget("todo"), newWidget("storage"), newWidget("quick-links")] },
+          { id: newId(), label: "", width: "normal", minimized: false, widgets: [newWidget("clock"), newWidget("weather"), newWidget("todo")] },
+          { id: newId(), label: "", width: "wide", minimized: false, widgets: [newWidget("quick-links"), newWidget("messages"), newWidget("support")] },
         ],
       },
     ],
@@ -129,6 +155,7 @@ export function parseLayout(stored: unknown, appSlugs: string[]): WorkspaceLayou
   if (v1.success) {
     return {
       version: 2,
+      dashboardView: "notifications",
       appOrder: orderApps(v1.data.appOrder, appSlugs),
       pages: [{ id: newId(), name: "Home", theme: v1.data.theme, previousTheme: null, columns: v1.data.columns }],
     };
@@ -290,6 +317,26 @@ export function duplicatePage(l: WorkspaceLayout, pageId: string) {
 export function renamePage(l: WorkspaceLayout, pageId: string, name: string): WorkspaceLayout {
   const clean = name.slice(0, 40);
   return updatePage(l, pageId, (p) => ({ ...p, name: clean }));
+}
+
+/** Move a page one place left (-1) or right (+1) in the Pages menu. */
+export function movePage(l: WorkspaceLayout, pageId: string, by: -1 | 1): WorkspaceLayout {
+  const i = l.pages.findIndex((p) => p.id === pageId);
+  const j = i + by;
+  if (i < 0 || j < 0 || j >= l.pages.length) return l;
+  const pages = [...l.pages];
+  [pages[i], pages[j]] = [pages[j], pages[i]];
+  return { ...l, pages };
+}
+
+/** Put a page back to the starting widgets and columns (keeps its name and theme). */
+export function resetPage(l: WorkspaceLayout, pageId: string): WorkspaceLayout {
+  const fresh = defaultLayout([]).pages[0];
+  return updatePage(l, pageId, (p) => ({ ...p, columns: fresh.columns }));
+}
+
+export function setDashboardView(l: WorkspaceLayout, view: DashboardView): WorkspaceLayout {
+  return l.dashboardView === view ? l : { ...l, dashboardView: view };
 }
 
 export function removePage(l: WorkspaceLayout, pageId: string): WorkspaceLayout {
